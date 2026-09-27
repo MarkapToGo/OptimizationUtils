@@ -60,9 +60,14 @@ jobs:
           echo "Available jars in build/libs:"
           ls -la build/libs/
           
-          # Find the built jar
-          JAR_PATH=$(find build/libs -maxdepth 1 -name "OptimizationUtils-${{ env.VERSION }}.jar" | head -n 1)
-          if [ -z "$JAR_PATH" ]; then
+          # Prioritize the reobfuscated and shadowed production jar
+          if [ -f "build/libs/OptimizationUtils-${{ env.VERSION }}-reobf.jar" ]; then
+            cp "build/libs/OptimizationUtils-${{ env.VERSION }}-reobf.jar" "build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
+            JAR_PATH="build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
+          elif [ -f "build/libs/OptimizationUtils-${{ env.VERSION }}-all.jar" ]; then
+            cp "build/libs/OptimizationUtils-${{ env.VERSION }}-all.jar" "build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
+            JAR_PATH="build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
+          else
             JAR_PATH=$(find build/libs -maxdepth 1 -name "*.jar" ! -name "*-dev.jar" ! -name "*-sources.jar" | head -n 1)
           fi
           
