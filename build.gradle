@@ -5,7 +5,11 @@ plugins {
 }
 
 group = 'com.markaptogo'
-version = '1.0.10'
+def baseVer = project.findProperty('baseVersion') ?: '1.0'
+def offset = (project.findProperty('buildOffset') ?: '10').toInteger()
+def runNum = (project.findProperty('buildNumber') ?: '1').toInteger()
+def defaultVer = "${baseVer}.${offset + runNum}"
+version = project.findProperty('pluginVersion') ?: defaultVer
 
 repositories {
     mavenCentral()

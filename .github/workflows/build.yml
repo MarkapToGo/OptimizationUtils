@@ -1,32 +1,88 @@
-name: Java CI
+name: Build and Release
 
 on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'adopt'
-          java-version: 21
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      - name: Setup gradle cache
-        uses: burrunan/gradle-cache-action@v3
+
+      - name: Determine Version
+        id: versioning
+        run: |
+          BASE_VERSION=$(grep '^baseVersion=' gradle.properties 2>/dev/null | cut -d'=' -f2 | tr -d ' \r\n')
+          [ -z "$BASE_VERSION" ] && BASE_VERSION="1.0"
+          
+          OFFSET=$(grep '^buildOffset=' gradle.properties 2>/dev/null | cut -d'=' -f2 | tr -d ' \r\n')
+          [ -z "$OFFSET" ] && OFFSET="10"
+          
+          BUILD_NUM=$((OFFSET + GITHUB_RUN_NUMBER))
+          VERSION="${BASE_VERSION}.${BUILD_NUM}"
+          TAG="v${VERSION}"
+          
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+          echo "BUILD_NUM=${BUILD_NUM}" >> $GITHUB_ENV
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "build_num=${BUILD_NUM}" >> $GITHUB_OUTPUT
+          
+          echo "Building version ${VERSION} (Build #${BUILD_NUM}, Run #${GITHUB_RUN_NUMBER})"
+
+      - name: Build with Gradle
+        run: ./gradlew build -PpluginVersion=${{ env.VERSION }}
+
+      - name: Locate Built Artifact
+        id: find_jar
+        run: |
+          echo "Available jars in build/libs:"
+          ls -la build/libs/
+          
+          # Find the built jar
+          JAR_PATH=$(find build/libs -maxdepth 1 -name "OptimizationUtils-${{ env.VERSION }}.jar" | head -n 1)
+          if [ -z "$JAR_PATH" ]; then
+            JAR_PATH=$(find build/libs -maxdepth 1 -name "*.jar" ! -name "*-dev.jar" ! -name "*-sources.jar" | head -n 1)
+          fi
+          
+          echo "Selected release JAR: $JAR_PATH"
+          echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
+          echo "jar_path=$JAR_PATH" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          save-generated-gradle-jars: false
-          save-local-build-cache: false
-          save-gradle-dependencies-cache: true
-          save-maven-dependencies-cache: true
-      - name: Build Project
-        run: ./gradlew build
+          tag_name: ${{ env.TAG }}
+          name: "Release ${{ env.VERSION }} (Build #${{ env.BUILD_NUM }})"
+          body: |
+            ### OptimizationUtils ${{ env.VERSION }}
+            
+            - **Version**: `${{ env.VERSION }}`
+            - **Build Number**: `${{ env.BUILD_NUM }}`
+            - **Workflow Run**: #${{ github.run_number }}
+            - **Commit**: `${{ github.sha }}`
+          files: ${{ env.JAR_PATH }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
