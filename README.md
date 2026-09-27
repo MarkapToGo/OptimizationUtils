@@ -9,11 +9,11 @@ A minecraft plugin with some useful optimization utils (see below).
 
 ## Features
 
-- **Dynamic mobcap** - automatically throttles mob spawning (optionally spawners too) when MSPT exceeds a configurable threshold.
-- **Dynamic random tick speed** - automatically turns random ticks off when MSPT exceeds a configurable threshold.
+- **Dynamic mobcap** - lowers the mobcap in configurable steps as MSPT rises or TPS drops (e.g. 75% at 35ms, 50% at 40ms, 0% at 50ms) and raises it again step by step once the server recovers. Each step can optionally throttle spawners too.
+- **Dynamic random tick speed** - automatically turns random ticks off when MSPT exceeds (or TPS drops below) a configurable threshold.
 - **Disable entity ticking** - stops ticking selected mobs (they stay in the world, but no AI/movement). Two modes: disabled entity ticking entirely, or uses Bukkit's `Mob#setAware`. Mobs can be filtered by entity type or Bukkit class, with include/exclude lists.
 - **Runtime tweaks via commands** - change view distance (globally or per player, persisted), simulation distance, mobcaps, mob spawn frequency and villager tick rates without a restart.
-- **Diagnostics** - analyze which chunks hold the most entities, kill entities/animals far away from players, and a detailed `/ou info` overview.
+- **Diagnostics** - analyze which chunks hold the most entities, plus a detailed `/ou info` overview.
 
 ## Commands
 
@@ -30,13 +30,15 @@ Main command: `/optimizationutils` (aliases: `/ou`, `/opt`)
 | `/ou setticksperspawn <spawn category> <ticks>` | Sets mob spawn frequency (ticks between spawn attempts) for all worlds |
 | `/ou setvillagersensortickrate <ticks>` | Sets villager sensor tick rate for all worlds |
 | `/ou setvillagerbehaviortickrate <ticks>` | Sets villager behavior tick rate for all worlds |
-| `/ou killoutofrange <entity type> <range>` | Kills entities of the given type that are out of range of all players |
-| `/ou killanimalsoutofrange <range>` | Kills animals that are out of range of all players |
 | `/ou reload` | Reloads the configuration |
 
 ## Permissions
 
 - `optimizationutils.admin` - Access to all commands
+
+## Configuration
+
+The default configuration lives in [`src/main/resources/config.yml`](src/main/resources/config.yml). On first start it is written to `plugins/OptimizationUtils/config.yml`; settings missing from an existing server config are filled in from it. Apply changes on a running server with `/ou reload`.
 
 ## Contributing
 

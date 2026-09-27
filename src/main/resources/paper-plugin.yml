@@ -9,6 +9,3 @@ permissions:
   optimizationutils.admin:
     description: Allows using the /optimizationutils command
     default: op
-  optimizationutils.updatechecker:
-    description: Allows players to receive update notifications
-    default: op

@@ -2,8 +2,11 @@ package com.markaptogo.optimizationutils.commands;
 
 import com.markaptogo.optimizationutils.OptimizationUtils;
 import com.markaptogo.optimizationutils.config.PluginConfiguration;
+import com.markaptogo.optimizationutils.config.model.PerformanceMetric;
+import com.markaptogo.optimizationutils.manager.DynamicMobcapManager;
 import com.markaptogo.optimizationutils.manager.EntityTickManager;
 import com.markaptogo.optimizationutils.manager.NMSUtils;
+import com.markaptogo.optimizationutils.manager.ThrottleUtils;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -21,7 +24,6 @@ import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
-import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -29,15 +31,10 @@ import org.bukkit.Chunk;
 import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Animals;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.SpawnCategory;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -61,8 +58,6 @@ public final class OptimizationUtilsCommand {
         new HelpEntry("setticksperspawn", "<spawn category> <ticks>", "Sets ticks per spawn for all worlds (how often the server tries to spawn mobs)"),
         new HelpEntry("setvillagersensortickrate", "<ticks>", "Sets the villager secondary POI sensor tick rate for all worlds"),
         new HelpEntry("setvillagerbehaviortickrate", "<ticks>", "Sets the villager validate-nearby-POI behavior tick rate for all worlds"),
-        new HelpEntry("killoutofrange", "<entity type> <range>", "Kills entities that are out of range of players in the world"),
-        new HelpEntry("killanimalsoutofrange", "<range>", "Kills animals that are out of range of players in the world"),
         new HelpEntry("setviewdistance", "<distance> [player]", "Sets view distance for all worlds or a single player"),
         new HelpEntry("resetviewdistance", "<player>", "Resets view distance for a player to server default"),
         new HelpEntry("reload", "", "Reloads the configuration"),
@@ -101,13 +96,6 @@ public final class OptimizationUtilsCommand {
             .then(Commands.literal("setvillagerbehaviortickrate")
                 .then(Commands.argument("ticks", IntegerArgumentType.integer())
                     .executes(ctx -> setVillagerBehaviorTickRate(sender(ctx), IntegerArgumentType.getInteger(ctx, "ticks")))))
-            .then(Commands.literal("killoutofrange")
-                .then(Commands.argument("type", ArgumentTypes.resource(RegistryKey.ENTITY_TYPE))
-                    .then(Commands.argument("range", IntegerArgumentType.integer(0))
-                        .executes(ctx -> killOutOfRange(player(ctx), ctx.getArgument("type", EntityType.class), IntegerArgumentType.getInteger(ctx, "range"))))))
-            .then(Commands.literal("killanimalsoutofrange")
-                .then(Commands.argument("range", IntegerArgumentType.integer(0))
-                    .executes(ctx -> killAnimalsOutOfRange(player(ctx), IntegerArgumentType.getInteger(ctx, "range")))))
             .then(Commands.literal("setviewdistance")
                 .then(Commands.argument("distance", IntegerArgumentType.integer(2, 32))
                     .executes(ctx -> setViewDistance(sender(ctx), IntegerArgumentType.getInteger(ctx, "distance"), null))
@@ -182,6 +170,9 @@ public final class OptimizationUtilsCommand {
         }
 
         sender.sendMessage(Component.text("Successfully set spawn limit for " + spawnCategory.name() + " to " + limit + " for all worlds.").color(NamedTextColor.GREEN));
+        if (DynamicMobcapManager.currentPercent() < 100) {
+            sender.sendMessage(Component.text("Dynamic mobcap is currently at " + DynamicMobcapManager.currentPercent() + "%, so this limit will be scaled down until the server recovers.").color(NamedTextColor.YELLOW));
+        }
         return Command.SINGLE_SUCCESS;
     }
 
@@ -209,42 +200,6 @@ public final class OptimizationUtilsCommand {
         }
 
         sender.sendMessage(Component.text("Successfully set villager behavior tick rate to " + ticks + " for all worlds.").color(NamedTextColor.GREEN));
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static int killOutOfRange(Player player, EntityType entityType, int range) {
-        World world = player.getWorld();
-
-        List<Entity> toRemove = world.getEntities().stream()
-            .filter(entity -> entity.getType() == entityType)
-            .collect(Collectors.toCollection(ArrayList::new));
-
-        for (Player onlinePlayer : world.getPlayers()) {
-            toRemove.removeIf(entity -> entity.getLocation().distance(onlinePlayer.getLocation()) <= range);
-        }
-
-        for (Entity entity : toRemove) {
-            entity.remove();
-        }
-
-        player.sendMessage(Component.text("Killed " + toRemove.size() + " entities out of range.").color(NamedTextColor.GREEN));
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static int killAnimalsOutOfRange(Player player, int range) {
-        World world = player.getWorld();
-
-        Collection<Animals> toRemove = world.getEntitiesByClass(Animals.class);
-
-        for (Player onlinePlayer : world.getPlayers()) {
-            toRemove.removeIf(entity -> entity.getLocation().distance(onlinePlayer.getLocation()) <= range);
-        }
-
-        for (Animals animal : toRemove) {
-            animal.remove();
-        }
-
-        player.sendMessage(Component.text("Killed " + toRemove.size() + " animals out of range.").color(NamedTextColor.GREEN));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -424,14 +379,19 @@ public final class OptimizationUtilsCommand {
         message = message.append(Component.text("  MSPT Calculation Mode: " + OptimizationUtils.instance().pluginConfiguration().msptCalculationMode).color(NamedTextColor.GRAY))
                 .append(Component.newline());
 
+        message = message.append(Component.text("  Current Performance: " + ThrottleUtils.format(PerformanceMetric.MSPT, ThrottleUtils.getMspt())
+                + " / " + ThrottleUtils.format(PerformanceMetric.TPS, ThrottleUtils.getTps())).color(NamedTextColor.GRAY))
+                .append(Component.newline());
+
         String dynamicMobcapStatus = OptimizationUtils.instance().pluginConfiguration().dynamicMobcap.enabled
-            ? "Enabled (threshold: " + OptimizationUtils.instance().pluginConfiguration().dynamicMobcap.msptThreshold + "ms)"
+            ? "Enabled (by " + OptimizationUtils.instance().pluginConfiguration().dynamicMobcap.metric + ", currently " + DynamicMobcapManager.currentPercent() + "% of normal mobcap"
+                + (DynamicMobcapManager.shouldThrottleSpawners() ? ", spawners throttled" : "") + ")"
             : "Disabled";
         message = message.append(Component.text("  Dynamic Mobcap: " + dynamicMobcapStatus).color(NamedTextColor.GRAY))
                 .append(Component.newline());
 
         String dynamicRandomTickStatus = OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.enabled
-            ? "Enabled (threshold: " + OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.msptThreshold + "ms)"
+            ? "Enabled (threshold: " + OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.threshold + " " + OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.metric + ")"
             : "Disabled";
         message = message.append(Component.text("  Dynamic Random Tick Speed: " + dynamicRandomTickStatus).color(NamedTextColor.GRAY))
                 .append(Component.newline());

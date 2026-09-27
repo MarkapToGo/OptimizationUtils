@@ -21,6 +21,8 @@ public class PlayerListener implements Listener {
             // Apply the stored view distance override
             int viewDistance = viewDistanceOverrides.get(player.getUniqueId());
             Bukkit.getScheduler().runTaskLater(OptimizationUtils.instance(), () -> {
+                if (!player.isOnline()) return;
+
                 player.setViewDistance(viewDistance);
             }, 20L); // Delay by 1 second to ensure proper application
         }

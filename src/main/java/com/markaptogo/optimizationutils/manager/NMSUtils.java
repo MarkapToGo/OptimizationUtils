@@ -22,12 +22,15 @@ public class NMSUtils {
         int configBasedSimulationDistance = Math.min(newSimulationDistance, 9);
         ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
         // Set mob spawn range
-        serverLevel.spigotConfig.mobSpawnRange = (byte) Math.max(3, Math.min(8, configBasedSimulationDistance - 1));
+        int mobSpawnRange = Math.max(3, Math.min(8, configBasedSimulationDistance - 1));
+        serverLevel.spigotConfig.mobSpawnRange = (byte) mobSpawnRange;
 
         // Set monster despawn range
         WorldConfiguration.Entities.Spawning.DespawnRangePair oldDespawnRangePair = serverLevel.paperConfig().entities.spawning.despawnRanges.get(MobCategory.MONSTER);
 
-        IntOr.Default horizontalLimit = new IntOr.Default(OptionalInt.of((configBasedSimulationDistance - 1) * 16));
+        // Based on the (clamped) mob spawn range, so monsters never spawn outside the hard despawn range
+        // and get removed right away (happened for simulation distances below 4)
+        IntOr.Default horizontalLimit = new IntOr.Default(OptionalInt.of(mobSpawnRange * 16));
         IntOr.Default verticalLimit = ReflectionUtils.getDespawnRangesVerticalLimit(oldDespawnRangePair.hard());
         serverLevel.paperConfig().entities.spawning.despawnRanges.replace(
             MobCategory.MONSTER,

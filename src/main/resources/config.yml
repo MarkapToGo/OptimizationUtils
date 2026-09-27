@@ -1,0 +1,93 @@
+# A config file for the plugin.
+
+
+# Debug mode for the plugin.
+debug: false
+
+# The method used to calculate the MSPT for dynamic features. Also applies to TPS, which is calculated from the MSPT.
+#  - AVERAGE_5S - Uses the average MSPT over the last 5 seconds.
+#  - LAST_TICK - Uses the current MSPT of the last tick.
+msptCalculationMode: AVERAGE_5S
+
+# This feature allows the plugin to dynamically adjust the mobcap based on server performance.
+# The mobcap is lowered in steps while the server lags more, and raised again step by step once it recovers.
+dynamicMobcap:
+  enabled: true
+  
+  # What the thresholds below are compared against.
+  #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  # Change the thresholds and recoveryMargin as well when switching, e.g. for TPS: 19 -> 75%, 17 -> 50%, 15 -> 25%, 12 -> 0%.
+  metric: MSPT
+  
+  # How often the server performance is checked and the mobcap adjusted, in ticks (20 ticks = 1 second).
+  checkInterval: 20
+  
+  # How far (in the unit of the metric) the server has to recover past the threshold of the active step before the
+  # mobcap is raised to the previous step. Stops the mobcap from flipping back and forth around a threshold.
+  recoveryMargin: 2.0
+  
+  # The spawn categories whose mobcap is adjusted.
+  # Available: MONSTER, ANIMAL, WATER_ANIMAL, WATER_AMBIENT, WATER_UNDERGROUND_CREATURE, AMBIENT, AXOLOTL
+  categories:
+  - MONSTER
+  - ANIMAL
+  - WATER_ANIMAL
+  - WATER_AMBIENT
+  - WATER_UNDERGROUND_CREATURE
+  - AMBIENT
+  - AXOLOTL
+  
+  # The steps. The laggiest step whose threshold is reached is active, before the first one the normal mobcap is used.
+  #  - threshold - the MSPT (reached when at or above) or TPS (reached when at or below) from which on this step is active
+  #  - mobcapPercent - the mobcap of the categories above, in percent of their normal mobcap (0 stops natural spawning)
+  #  - throttleSpawners - if spawners should stop spawning while this step is active
+  steps:
+  - threshold: 35.0
+    mobcapPercent: 75
+    throttleSpawners: false
+  - threshold: 40.0
+    mobcapPercent: 50
+    throttleSpawners: false
+  - threshold: 45.0
+    mobcapPercent: 25
+    throttleSpawners: false
+  - threshold: 50.0
+    mobcapPercent: 0
+    throttleSpawners: false
+
+# Stops ticking the selected mobs. They stay in the world but are not ticked by the server (no AI, no movement).
+disableEntityTicking:
+  enabled: false
+  
+  # How ticking is disabled.
+  #  - ALL_TICKING - removes the mob from the server's entity tick list, so nothing about it is ticked at all.
+  #                  Nothing is saved to the mob, everything comes back on its own after a restart.
+  #  - BUKKIT_AWARE - uses Bukkit's Mob#setAware, so only the mob's AI is skipped (it still falls, burns, despawns, ...).
+  #                   Beware: this is saved to the mob (Bukkit.Aware), so mobs made unaware by other plugins or commands are restored as aware too.
+  mode: ALL_TICKING
+  
+  # How the list below is interpreted.
+  #  - INCLUDE - only mobs matching the list are not ticked.
+  #  - EXCLUDE - every mob except those matching the list is not ticked.
+  filterMode: INCLUDE
+  
+  # Mobs that should not be ticked. Accepted values:
+  #  - ALL - every mob
+  #  - type:COW - a concrete entity type (ZOMBIE, COW, VILLAGER, ...)
+  #  - bukkit_class:Monster - a Bukkit interface from org.bukkit.entity (Mob, Monster, Animals, Raider, ...), case sensitive. May break between versions.
+  #    See: https://jd.papermc.io/paper/org/bukkit/entity/package-summary.html#class-summary
+  entities:
+  - bukkit_class:Animals
+
+# This feature allows the plugin to dynamically turn on or off random tick speed.
+dynamicRandomTickSpeed:
+  enabled: false
+  
+  # What the threshold below is compared against.
+  #  - MSPT - milliseconds per tick, random ticks are turned off at or above the threshold.
+  #  - TPS - ticks per second, random ticks are turned off at or below the threshold.
+  metric: MSPT
+  
+  # The MSPT in milliseconds or the TPS (depending on the metric) at which random ticks are turned off.
+  threshold: 45.0

@@ -6,10 +6,10 @@ import com.markaptogo.optimizationutils.config.DataConfiguration;
 import com.markaptogo.optimizationutils.config.PluginConfiguration;
 import com.markaptogo.optimizationutils.listeners.EntityListener;
 import com.markaptogo.optimizationutils.listeners.PlayerListener;
-import com.markaptogo.optimizationutils.listeners.UpdateNotifyListener;
+import com.markaptogo.optimizationutils.listeners.ServerTickListener;
+import com.markaptogo.optimizationutils.manager.DynamicMobcapManager;
 import com.markaptogo.optimizationutils.manager.EntityTickManager;
 import com.markaptogo.optimizationutils.manager.ThrottleUtils;
-import com.markaptogo.optimizationutils.updatechecker.UpdateChecker;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
@@ -18,12 +18,13 @@ import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.Iterator;
+import java.util.Map;
 
 public final class OptimizationUtils extends JavaPlugin {
 
     private PluginConfiguration pluginConfiguration;
     private DataConfiguration dataConfiguration;
-    private UpdateChecker updateChecker;
 
     private static OptimizationUtils instance;
 
@@ -40,26 +41,25 @@ public final class OptimizationUtils extends JavaPlugin {
         restoreOriginalRandomTickSpeeds();
 
         EntityTickManager.sync();
+        DynamicMobcapManager.sync();
 
         Bukkit.getPluginManager().registerEvents(new EntityListener(), this);
-        Bukkit.getPluginManager().registerEvents(new UpdateNotifyListener(), this);
         Bukkit.getPluginManager().registerEvents(new PlayerListener(), this);
+        Bukkit.getPluginManager().registerEvents(new ServerTickListener(), this);
 
         // Plugin startup logic
         registerCommands();
 
-        // Check for updates
-        this.updateChecker = new UpdateChecker();
-        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
-            this.updateChecker.checkForUpdates();
-        }, 0L, 24 * 60 * 60 * 20); // Check every 24h
-
         // Dynamic Random Tick Speed Task
         Bukkit.getScheduler().runTaskTimer(this, () -> {
-            if (!this.pluginConfiguration().dynamicRandomTickSpeed.enabled) return;
+            if (!this.pluginConfiguration().dynamicRandomTickSpeed.enabled) {
+                // Give worlds their random ticks back if the feature was turned off while throttling
+                restoreOriginalRandomTickSpeeds();
+                return;
+            }
 
             for (World world : Bukkit.getWorlds()) {
-                if (ThrottleUtils.shouldThrottle(world, this.pluginConfiguration().dynamicRandomTickSpeed.msptThreshold, "RandomTickSpeed")) {
+                if (ThrottleUtils.shouldThrottle(world, this.pluginConfiguration().dynamicRandomTickSpeed.metric, this.pluginConfiguration().dynamicRandomTickSpeed.threshold, "RandomTickSpeed")) {
                     // Store original randomtickspeed if not already stored
                     int currentRandomTickSpeed = world.getGameRuleValue(GameRules.RANDOM_TICK_SPEED);
 
@@ -108,18 +108,32 @@ public final class OptimizationUtils extends JavaPlugin {
 
         // Give unticked mobs back to the tick list
         EntityTickManager.disable();
+
+        // Give worlds their normal mobcap back
+        DynamicMobcapManager.disable();
     }
 
+    /**
+     * Restores the stored random tick speed of every loaded world. Entries of worlds that are not
+     * loaded are kept, so they can be restored once the world is loaded again.
+     */
     private void restoreOriginalRandomTickSpeeds() {
-        for (var entry : this.dataConfiguration().originalRandomTickSpeeds.entrySet()) {
+        boolean changed = false;
+
+        Iterator<Map.Entry<String, Integer>> iterator = this.dataConfiguration().originalRandomTickSpeeds.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, Integer> entry = iterator.next();
             World world = Bukkit.getWorld(entry.getKey());
-            if (world != null) {
-                world.setGameRule(GameRules.RANDOM_TICK_SPEED, entry.getValue());
-            }
+            if (world == null) continue;
+
+            world.setGameRule(GameRules.RANDOM_TICK_SPEED, entry.getValue());
+            iterator.remove();
+            changed = true;
         }
 
-        this.dataConfiguration().originalRandomTickSpeeds.clear();
-        this.dataConfiguration().save();
+        if (changed) {
+            this.dataConfiguration().save();
+        }
     }
 
     private void registerCommands() {
@@ -144,13 +158,10 @@ public final class OptimizationUtils extends JavaPlugin {
     }
 
     public void reloadConfiguration() {
-        this.pluginConfiguration.load();
+        ConfigurationFactory.loadPluginConfiguration(this.pluginConfiguration);
         this.dataConfiguration.load();
 
         EntityTickManager.sync();
-    }
-
-    public UpdateChecker getUpdateChecker() {
-        return updateChecker;
+        DynamicMobcapManager.sync();
     }
 }
