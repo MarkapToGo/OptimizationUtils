@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id "com.gradleup.shadow" version "8.3.6"
-    id("io.papermc.paperweight.userdev") version "2.0.0-beta.17"
+    id 'com.gradleup.shadow' version '9.6.1'
+    id 'io.papermc.paperweight.userdev' version '2.0.0-beta.24'
 }
 
 group = 'com.markaptogo'
@@ -14,74 +14,56 @@ version = project.findProperty('pluginVersion') ?: defaultVer
 repositories {
     mavenCentral()
     maven {
-        name = "papermc-repo"
-        url = "https://repo.papermc.io/repository/maven-public/"
-    }
-    maven {
-        name = "sonatype"
-        url = "https://oss.sonatype.org/content/groups/public/"
+        name = 'papermc-repo'
+        url = 'https://repo.papermc.io/repository/maven-public/'
     }
 
     // Okaeri Config
-    maven { url 'https://storehouse.okaeri.eu/repository/maven-public/' }
-
-    // ACF
-    maven { url = "https://repo.aikar.co/content/groups/aikar/" }
+    maven { url = 'https://storehouse.okaeri.eu/repository/maven-public/' }
 }
 
 dependencies {
-    // Paper API with NMS
-    paperweight.paperDevBundle("1.21.1-R0.1-SNAPSHOT")
-
-    implementation "co.aikar:acf-paper:0.5.1-SNAPSHOT"
+    paperweight.paperDevBundle('26.2.build.129-stable')
 
     implementation 'eu.okaeri:okaeri-configs-yaml-bukkit:5.0.8'
     implementation 'eu.okaeri:okaeri-configs-serdes-bukkit:5.0.8'
     implementation 'eu.okaeri:okaeri-configs-serdes-commons:5.0.8'
     implementation 'eu.okaeri:okaeri-configs-validator-okaeri:5.0.8'
-    implementation 'eu.okaeri:okaeri-placeholders-bukkit:5.1.1'
 
-    implementation "org.bstats:bstats-bukkit:3.0.2"
+    implementation 'org.bstats:bstats-bukkit:3.2.1'
 }
 
-tasks.assemble {
-    dependsOn(tasks.shadowJar)
-    dependsOn(tasks.reobfJar)
-}
-
-shadowJar {
-    relocate("eu.okaeri", "com.markaptogo.optimizationutils.libs.eu.okaeri")
-
-    relocate("co.aikar.commands", "com.markaptogo.optimizationutils.libs.acf")
-    relocate("co.aikar.locales", "com.markaptogo.optimizationutils.libs.locales")
-
-    relocate("org.bstats", "com.markaptogo.optimizationutils.libs.org.bstats")
-}
-
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
+    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.compilerArgs += ["-parameters"]
+    options.release.set(targetJavaVersion)
+    options.compilerArgs += ['-parameters']
+}
 
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release.set(targetJavaVersion)
-    }
+tasks.jar {
+    archiveClassifier.set('dev')
+}
+
+tasks.shadowJar {
+    archiveClassifier.set('')
+
+    relocate('eu.okaeri', 'com.markaptogo.optimizationutils.libs.eu.okaeri')
+    relocate('org.bstats', 'com.markaptogo.optimizationutils.libs.org.bstats')
+}
+
+tasks.assemble {
+    dependsOn(tasks.shadowJar)
 }
 
 processResources {
     def props = [version: version]
     inputs.properties props
-    filteringCharset 'UTF-8'
-    filesMatching('plugin.yml') {
+    filteringCharset = 'UTF-8'
+    filesMatching('paper-plugin.yml') {
         expand props
     }
 }

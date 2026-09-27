@@ -4,8 +4,8 @@ A minecraft plugin with some useful optimization utils (see below).
 
 ## Requirements
 
-- Paper 1.21+ (older versions may not work. Pull requests are appreciated!)
-- Java 21+
+- Paper 26.2 (older versions are not supported)
+- Java 25+
 
 ## Features
 

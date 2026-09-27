@@ -26,7 +26,7 @@ public class UpdateNotifyListener implements Listener {
             event.getPlayer().sendMessage(Component.text("==========================================", NamedTextColor.YELLOW));
             event.getPlayer().sendMessage(Component.text("A new version of OptimizationUtils is available!", NamedTextColor.YELLOW, TextDecoration.BOLD));
             event.getPlayer().sendMessage(Component.text("Current version: ", NamedTextColor.GRAY)
-                    .append(Component.text(OptimizationUtils.instance().getDescription().getVersion(), NamedTextColor.RED)));
+                    .append(Component.text(OptimizationUtils.instance().getPluginMeta().getVersion(), NamedTextColor.RED)));
             event.getPlayer().sendMessage(Component.text("Latest version: ", NamedTextColor.GRAY)
                     .append(Component.text(OptimizationUtils.instance().getUpdateChecker().getLatestVersion(), NamedTextColor.GREEN)));
             event.getPlayer().sendMessage(Component.text("Download: ", NamedTextColor.GRAY)

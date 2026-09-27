@@ -1,6 +1,5 @@
 package com.markaptogo.optimizationutils;
 
-import co.aikar.commands.PaperCommandManager;
 import com.markaptogo.optimizationutils.commands.OptimizationUtilsCommand;
 import com.markaptogo.optimizationutils.config.ConfigurationFactory;
 import com.markaptogo.optimizationutils.config.DataConfiguration;
@@ -11,9 +10,10 @@ import com.markaptogo.optimizationutils.listeners.UpdateNotifyListener;
 import com.markaptogo.optimizationutils.manager.EntityTickManager;
 import com.markaptogo.optimizationutils.manager.ThrottleUtils;
 import com.markaptogo.optimizationutils.updatechecker.UpdateChecker;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
-import org.bukkit.GameRule;
+import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -61,7 +61,7 @@ public final class OptimizationUtils extends JavaPlugin {
             for (World world : Bukkit.getWorlds()) {
                 if (ThrottleUtils.shouldThrottle(world, this.pluginConfiguration().dynamicRandomTickSpeed.msptThreshold, "RandomTickSpeed")) {
                     // Store original randomtickspeed if not already stored
-                    int currentRandomTickSpeed = world.getGameRuleValue(GameRule.RANDOM_TICK_SPEED);
+                    int currentRandomTickSpeed = world.getGameRuleValue(GameRules.RANDOM_TICK_SPEED);
 
                     if (!this.dataConfiguration().originalRandomTickSpeeds.containsKey(world.getName())) {
                         if (this.pluginConfiguration().debug) {
@@ -81,7 +81,7 @@ public final class OptimizationUtils extends JavaPlugin {
                     }
 
                     // Disable random ticks
-                    world.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
+                    world.setGameRule(GameRules.RANDOM_TICK_SPEED, 0);
                 } else {
                     // Restore original random tick speed if it was changed
                     if (this.dataConfiguration().originalRandomTickSpeeds.containsKey(world.getName())) {
@@ -90,7 +90,7 @@ public final class OptimizationUtils extends JavaPlugin {
                         }
                         // Restore
                         int originalRandomTickSpeed = this.dataConfiguration().originalRandomTickSpeeds.get(world.getName());
-                        world.setGameRule(GameRule.RANDOM_TICK_SPEED, originalRandomTickSpeed);
+                        world.setGameRule(GameRules.RANDOM_TICK_SPEED, originalRandomTickSpeed);
 
                         // Remove from map
                         this.dataConfiguration().originalRandomTickSpeeds.remove(world.getName());
@@ -114,7 +114,7 @@ public final class OptimizationUtils extends JavaPlugin {
         for (var entry : this.dataConfiguration().originalRandomTickSpeeds.entrySet()) {
             World world = Bukkit.getWorld(entry.getKey());
             if (world != null) {
-                world.setGameRule(GameRule.RANDOM_TICK_SPEED, entry.getValue());
+                world.setGameRule(GameRules.RANDOM_TICK_SPEED, entry.getValue());
             }
         }
 
@@ -123,11 +123,7 @@ public final class OptimizationUtils extends JavaPlugin {
     }
 
     private void registerCommands() {
-        PaperCommandManager manager = new PaperCommandManager(this);
-
-        manager.enableUnstableAPI("help");
-
-        manager.registerCommand(new OptimizationUtilsCommand());
+        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> OptimizationUtilsCommand.register(event.registrar()));
     }
 
     private void setupMetrics() {

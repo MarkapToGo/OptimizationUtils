@@ -18,11 +18,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '25'
           cache: 'gradle'
 
       - name: Grant execute permission for gradlew
@@ -59,18 +59,14 @@ jobs:
         run: |
           echo "Available jars in build/libs:"
           ls -la build/libs/
-          
-          # Prioritize the reobfuscated and shadowed production jar
-          if [ -f "build/libs/OptimizationUtils-${{ env.VERSION }}-reobf.jar" ]; then
-            cp "build/libs/OptimizationUtils-${{ env.VERSION }}-reobf.jar" "build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
-            JAR_PATH="build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
-          elif [ -f "build/libs/OptimizationUtils-${{ env.VERSION }}-all.jar" ]; then
-            cp "build/libs/OptimizationUtils-${{ env.VERSION }}-all.jar" "build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
-            JAR_PATH="build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
-          else
-            JAR_PATH=$(find build/libs -maxdepth 1 -name "*.jar" ! -name "*-dev.jar" ! -name "*-sources.jar" | head -n 1)
+
+          # Minecraft 26.x runs Mojang-mapped, so the unclassified shadow jar is the production jar
+          JAR_PATH="build/libs/OptimizationUtils-${{ env.VERSION }}.jar"
+          if [ ! -f "$JAR_PATH" ]; then
+            echo "Expected $JAR_PATH was not built" >&2
+            exit 1
           fi
-          
+
           echo "Selected release JAR: $JAR_PATH"
           echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
           echo "jar_path=$JAR_PATH" >> $GITHUB_OUTPUT

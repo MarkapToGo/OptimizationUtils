@@ -4,7 +4,7 @@ import io.papermc.paper.configuration.WorldConfiguration;
 import io.papermc.paper.configuration.type.DespawnRange;
 import io.papermc.paper.configuration.type.number.IntOr;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.MobCategory;
 import org.bukkit.World;
 import org.spongepowered.configurate.serialize.SerializationException;
@@ -42,12 +42,12 @@ public class NMSUtils {
 
     public static void setNMSVillagerSensorTickRate(World world, int ticks) {
         ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
-        serverLevel.paperConfig().tickRates.sensor.put(EntityType.VILLAGER, "secondarypoisensor", ticks);
+        serverLevel.paperConfig().tickRates.sensor.put(EntityTypes.VILLAGER, "secondarypoisensor", ticks);
     }
 
     public static void setNMSVillagerBehaviorTickRate(World world, int ticks) {
         ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
-        serverLevel.paperConfig().tickRates.sensor.put(EntityType.VILLAGER, "validatenearbypoi", ticks);
+        serverLevel.paperConfig().tickRates.behavior.put(EntityTypes.VILLAGER, "validatenearbypoi", ticks);
     }
 
     /**
@@ -55,7 +55,7 @@ public class NMSUtils {
      */
     public static Integer getNMSVillagerSensorTickRate(World world) {
         ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
-        return serverLevel.paperConfig().tickRates.sensor.get(EntityType.VILLAGER, "secondarypoisensor");
+        return serverLevel.paperConfig().tickRates.sensor.get(EntityTypes.VILLAGER, "secondarypoisensor");
     }
 
     /**
@@ -63,6 +63,6 @@ public class NMSUtils {
      */
     public static Integer getNMSVillagerBehaviorTickRate(World world) {
         ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
-        return serverLevel.paperConfig().tickRates.sensor.get(EntityType.VILLAGER, "validatenearbypoi");
+        return serverLevel.paperConfig().tickRates.behavior.get(EntityTypes.VILLAGER, "validatenearbypoi");
     }
 }

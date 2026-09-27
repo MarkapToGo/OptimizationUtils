@@ -8,7 +8,7 @@ import com.google.gson.JsonParser;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.util.logging.Level;
 
 public class UpdateChecker {
@@ -22,10 +22,9 @@ public class UpdateChecker {
     public void checkForUpdates() {
         OptimizationUtils.instance().getServer().getScheduler().runTaskAsynchronously(OptimizationUtils.instance(), () -> {
             try {
-                URL url = new URL(MODRINTH_API_URL);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                HttpURLConnection connection = (HttpURLConnection) URI.create(MODRINTH_API_URL).toURL().openConnection();
                 connection.setRequestMethod("GET");
-                connection.setRequestProperty("User-Agent", "OptimizationUtils/" + OptimizationUtils.instance().getDescription().getVersion());
+                connection.setRequestProperty("User-Agent", "OptimizationUtils/" + OptimizationUtils.instance().getPluginMeta().getVersion());
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
 
@@ -64,7 +63,7 @@ public class UpdateChecker {
             JsonObject latestVersionObj = versions.get(0).getAsJsonObject();
             this.latestVersion = latestVersionObj.get("version_number").getAsString();
 
-            String currentVersion = OptimizationUtils.instance().getDescription().getVersion().replace("-SNAPSHOT", "");
+            String currentVersion = OptimizationUtils.instance().getPluginMeta().getVersion().replace("-SNAPSHOT", "");
 
             if (!currentVersion.equals(latestVersion)) {
                 updateAvailable = true;
@@ -81,7 +80,7 @@ public class UpdateChecker {
     private void notifyConsole() {
         OptimizationUtils.instance().getLogger().warning("==========================================");
         OptimizationUtils.instance().getLogger().warning("A new version of OptimizationUtils is available!");
-        OptimizationUtils.instance().getLogger().warning("Current version: " + OptimizationUtils.instance().getDescription().getVersion());
+        OptimizationUtils.instance().getLogger().warning("Current version: " + OptimizationUtils.instance().getPluginMeta().getVersion());
         OptimizationUtils.instance().getLogger().warning("Latest version: " + latestVersion);
         OptimizationUtils.instance().getLogger().warning("Download: https://modrinth.com/plugin/optimizationutils");
         OptimizationUtils.instance().getLogger().warning("==========================================");
