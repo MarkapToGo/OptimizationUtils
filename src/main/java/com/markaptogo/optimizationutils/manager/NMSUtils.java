@@ -44,6 +44,14 @@ public class NMSUtils {
     }
 
     /**
+     * Returns the view or simulation distance the world was loaded with, from spigot.yml (server.properties by default).
+     */
+    public static int getNMSConfiguredDistance(World world, boolean simulation) {
+        ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
+        return simulation ? serverLevel.spigotConfig.simulationDistance : serverLevel.spigotConfig.viewDistance;
+    }
+
+    /**
      * The values changed by {@link #setNMSSimulationDistance(World, int)} besides the simulation distance itself.
      */
     public record SpawnRanges(byte mobSpawnRange, WorldConfiguration.Entities.Spawning.DespawnRangePair monsterDespawnRange) {

@@ -18,7 +18,7 @@ dynamicMobcap:
   
   # What the thresholds below are compared against.
   #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
-  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS and below 20 (20 = no lag, the TPS never goes above it).
   # Change the thresholds and recoveryMargin as well when switching, e.g. for TPS: 19 -> 75%, 17 -> 50%, 15 -> 25%, 12 -> 0%.
   metric: MSPT
   
@@ -69,12 +69,14 @@ dynamicMobcap:
 # This feature allows the plugin to dynamically lower the view distance of all worlds based on server performance.
 # The view distance is lowered in steps while the server lags more, and raised again step by step once it recovers.
 # Players with a view distance set by /ou setviewdistance <distance> <player> keep theirs.
+# Every change makes the players whose render distance is above the new view distance re-render all their chunks,
+# so it should change rarely (see recoveryDelay). Lowering the simulation distance goes unnoticed by players.
 dynamicViewDistance:
   enabled: false
   
   # What the thresholds below are compared against.
   #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
-  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS and below 20 (20 = no lag, the TPS never goes above it).
   # Change the thresholds and recoveryMargin as well when switching.
   metric: MSPT
   
@@ -92,7 +94,7 @@ dynamicViewDistance:
   
   # How long (in seconds) the server has to stay recovered before the distance is raised to the previous step.
   # Raising the distance loads chunks, which can cause lag on its own, so this should not be too low.
-  recoveryDelay: 30
+  recoveryDelay: 300
   
   # The steps. The laggiest step whose threshold is reached is active, before the first one the normal distance is used.
   #  - threshold - the MSPT (reached when at or above) or TPS (reached when at or below) from which on this step is active
@@ -111,7 +113,7 @@ dynamicSimulationDistance:
   
   # What the thresholds below are compared against.
   #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
-  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS and below 20 (20 = no lag, the TPS never goes above it).
   # Change the thresholds and recoveryMargin as well when switching.
   metric: MSPT
   
@@ -174,7 +176,7 @@ dynamicRandomTickSpeed:
   
   # What the thresholds below are compared against.
   #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
-  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS and below 20 (20 = no lag, the TPS never goes above it).
   # Change the thresholds and recoveryMargin as well when switching.
   metric: MSPT
   

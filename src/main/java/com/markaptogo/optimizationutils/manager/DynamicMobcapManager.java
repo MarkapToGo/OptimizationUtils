@@ -37,12 +37,16 @@ public final class DynamicMobcapManager {
      * Starts or stops adjusting the mobcap depending on the current configuration.
      */
     public static void sync() {
+        // Keep the active step, so a reload does not give back the normal mobcap until a later check lowers it again
+        int activeStep = tracker == null ? -1 : tracker.activeStepIndex();
         disable();
 
         PluginConfiguration.DynamicMobcap config = config();
         if (!config.enabled) return;
 
         tracker = new StepTracker<>(config.metric, config.triggerDelay, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
+        tracker.setActiveStep(activeStep);
+        ThrottleUtils.warnAboutAlwaysReachedSteps("dynamicMobcap", tracker);
         // MISC has no spawn limit, World#setSpawnLimit throws for it
         categories = config.categories.stream()
             .filter(category -> category != null && category != SpawnCategory.MISC)
@@ -51,6 +55,9 @@ public final class DynamicMobcapManager {
 
         long interval = Math.max(1, config.checkInterval);
         task = Bukkit.getScheduler().runTaskTimer(OptimizationUtils.instance(), DynamicMobcapManager::update, interval, interval);
+
+        // In the same tick as disable(), so spawning never sees the normal mobcap in between
+        applyActiveStep();
     }
 
     /**
@@ -89,10 +96,14 @@ public final class DynamicMobcapManager {
         }
 
         // Also runs without a step change, so worlds loaded in the meantime are covered
-        apply();
+        applyActiveStep();
     }
 
-    private static void apply() {
+    /**
+     * Scales the mobcap of every world to the active step, or gives them their normal mobcap back when no step is
+     * active. Also takes a mobcap changed in the meantime (e.g. by /ou setspawnlimit) as the new normal one.
+     */
+    public static void applyActiveStep() {
         LIMITS.keySet().removeIf(worldId -> Bukkit.getWorld(worldId) == null);
 
         PluginConfiguration.MobcapStep step = activeStep();

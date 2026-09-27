@@ -38,7 +38,7 @@ public class PluginConfiguration extends OkaeriConfig {
         @Comment("")
         @Comment("What the thresholds below are compared against.")
         @Comment(" - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).")
-        @Comment(" - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).")
+        @Comment(" - TPS - ticks per second, lower is worse. Thresholds are in TPS and below 20 (20 = no lag, the TPS never goes above it).")
         @Comment("Change the thresholds and recoveryMargin as well when switching, e.g. for TPS: 19 -> 75%, 17 -> 50%, 15 -> 25%, 12 -> 0%.")
         public PerformanceMetric metric = PerformanceMetric.MSPT;
 
@@ -106,7 +106,9 @@ public class PluginConfiguration extends OkaeriConfig {
     @Comment("This feature allows the plugin to dynamically lower the view distance of all worlds based on server performance.")
     @Comment("The view distance is lowered in steps while the server lags more, and raised again step by step once it recovers.")
     @Comment("Players with a view distance set by /ou setviewdistance <distance> <player> keep theirs.")
-    public DynamicDistance dynamicViewDistance = new DynamicDistance(List.of(
+    @Comment("Every change makes the players whose render distance is above the new view distance re-render all their chunks,")
+    @Comment("so it should change rarely (see recoveryDelay). Lowering the simulation distance goes unnoticed by players.")
+    public DynamicDistance dynamicViewDistance = new DynamicDistance(300, List.of(
         new DistanceStep(45.0f, 8),
         new DistanceStep(50.0f, 6)
     ));
@@ -115,7 +117,7 @@ public class PluginConfiguration extends OkaeriConfig {
     @Comment("This feature allows the plugin to dynamically lower the simulation distance of all worlds based on server performance.")
     @Comment("The simulation distance is lowered in steps while the server lags more, and raised again step by step once it recovers.")
     @Comment("Like /ou setsimulationdistance, this also adjusts the mob spawn range and monster despawn range to match.")
-    public DynamicDistance dynamicSimulationDistance = new DynamicDistance(List.of(
+    public DynamicDistance dynamicSimulationDistance = new DynamicDistance(30, List.of(
         new DistanceStep(40.0f, 6),
         new DistanceStep(45.0f, 5),
         new DistanceStep(50.0f, 4)
@@ -127,7 +129,7 @@ public class PluginConfiguration extends OkaeriConfig {
         @Comment("")
         @Comment("What the thresholds below are compared against.")
         @Comment(" - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).")
-        @Comment(" - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).")
+        @Comment(" - TPS - ticks per second, lower is worse. Thresholds are in TPS and below 20 (20 = no lag, the TPS never goes above it).")
         @Comment("Change the thresholds and recoveryMargin as well when switching.")
         public PerformanceMetric metric = PerformanceMetric.MSPT;
 
@@ -160,7 +162,8 @@ public class PluginConfiguration extends OkaeriConfig {
         public DynamicDistance() {
         }
 
-        public DynamicDistance(List<DistanceStep> steps) {
+        public DynamicDistance(int recoveryDelay, List<DistanceStep> steps) {
+            this.recoveryDelay = recoveryDelay;
             this.steps = new ArrayList<>(steps);
         }
     }
@@ -220,7 +223,7 @@ public class PluginConfiguration extends OkaeriConfig {
         @Comment("")
         @Comment("What the thresholds below are compared against.")
         @Comment(" - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).")
-        @Comment(" - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).")
+        @Comment(" - TPS - ticks per second, lower is worse. Thresholds are in TPS and below 20 (20 = no lag, the TPS never goes above it).")
         @Comment("Change the thresholds and recoveryMargin as well when switching.")
         public PerformanceMetric metric = PerformanceMetric.MSPT;
 

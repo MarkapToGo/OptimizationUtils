@@ -16,6 +16,7 @@ import com.markaptogo.optimizationutils.manager.EntityTickManager;
 import com.markaptogo.optimizationutils.metrics.Metrics;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -37,6 +38,12 @@ public final class OptimizationUtils extends JavaPlugin {
 
         this.pluginConfiguration = ConfigurationFactory.createPluginConfiguration(new File(this.getDataFolder(), "config.yml"));
         this.dataConfiguration = ConfigurationFactory.createDataConfiguration(new File(this.getDataFolder(), "data.yml"));
+
+        // The server loaded the worlds with the distances from server.properties, not the ones set by our commands
+        for (World world : Bukkit.getWorlds()) {
+            DynamicDistanceManager.VIEW.applyStoredDistance(world);
+            DynamicDistanceManager.SIMULATION.applyStoredDistance(world);
+        }
 
         EntityTickManager.sync();
         DynamicMobcapManager.sync();

@@ -41,7 +41,7 @@ public final class StepTracker<T> {
 
     public StepTracker(PerformanceMetric metric, int triggerDelaySeconds, double recoveryMargin, int recoveryDelaySeconds,
                        List<T> steps, ToDoubleFunction<T> threshold) {
-        this(metric, triggerDelaySeconds, recoveryMargin, recoveryDelaySeconds, steps, threshold, System::currentTimeMillis);
+        this(metric, triggerDelaySeconds, recoveryMargin, recoveryDelaySeconds, steps, threshold, ThrottleUtils::nowMillis);
     }
 
     public StepTracker(PerformanceMetric metric, int triggerDelaySeconds, double recoveryMargin, int recoveryDelaySeconds,
@@ -106,7 +106,10 @@ public final class StepTracker<T> {
             return true;
         }
 
-        if (activeStep < 0 || !metric.isRecovered(value, thresholdOf(activeStep), recoveryMargin, tickRate)) {
+        // Never recovered while the threshold is still reached, or the step would end and start again on every check
+        // (e.g. a TPS threshold of 20, which is reached and counts as recovered at full speed)
+        if (activeStep < 0 || metric.isReached(value, thresholdOf(activeStep))
+            || !metric.isRecovered(value, thresholdOf(activeStep), recoveryMargin, tickRate)) {
             recoveringSince = -1;
             return false;
         }
@@ -129,6 +132,32 @@ public final class StepTracker<T> {
      */
     public T activeStep() {
         return activeStep < 0 ? null : steps.get(activeStep);
+    }
+
+    /**
+     * Returns the index of the active step, or -1 when no step is active.
+     */
+    public int activeStepIndex() {
+        return activeStep;
+    }
+
+    /**
+     * Makes the step at the index active (clamped to the steps, -1 for none), e.g. to keep the active step when the
+     * configuration is reloaded.
+     */
+    public void setActiveStep(int step) {
+        activeStep = Math.clamp(step, -1, steps.size() - 1);
+        recoveringSince = -1;
+    }
+
+    /**
+     * Returns the thresholds that are reached at any server performance, so their step would never end.
+     */
+    public List<Double> alwaysReachedThresholds(double tickRate) {
+        return steps.stream()
+            .map(threshold::applyAsDouble)
+            .filter(value -> metric.isAlwaysReached(value, tickRate))
+            .toList();
     }
 
     /**

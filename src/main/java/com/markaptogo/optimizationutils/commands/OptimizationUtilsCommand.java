@@ -49,13 +49,14 @@ public final class OptimizationUtilsCommand {
 
     private static final List<HelpEntry> HELP = List.of(
         new HelpEntry("analyzechunks", "[all|entities|blockentities] [world]", "Lists the loaded chunks with the most entities and block entities (click one to teleport)"),
-        new HelpEntry("setsimulationdistance", "<distance>", "Sets simulation distance for all worlds while respecting despawn ranges"),
+        new HelpEntry("setsimulationdistance", "<distance>", "Sets simulation distance for all worlds while respecting despawn ranges (kept across restarts)"),
+        new HelpEntry("resetsimulationdistance", "", "Gives all worlds the simulation distance from server.properties back"),
         new HelpEntry("setspawnlimit", "<spawn category> <limit>", "Sets mobcap for all worlds"),
         new HelpEntry("setticksperspawn", "<spawn category> <ticks>", "Sets ticks per spawn for all worlds (how often the server tries to spawn mobs)"),
         new HelpEntry("setvillagersensortickrate", "<ticks>", "Sets the villager secondary POI sensor tick rate for all worlds"),
         new HelpEntry("setvillagerbehaviortickrate", "<ticks>", "Sets the villager validate-nearby-POI behavior tick rate for all worlds"),
-        new HelpEntry("setviewdistance", "<distance> [player]", "Sets view distance for all worlds or a single player"),
-        new HelpEntry("resetviewdistance", "<player>", "Resets view distance for a player to server default"),
+        new HelpEntry("setviewdistance", "<distance> [player]", "Sets view distance for all worlds or a single player (kept across restarts)"),
+        new HelpEntry("resetviewdistance", "[player]", "Gives all worlds the view distance from server.properties back, or a player the one of their world"),
         new HelpEntry("reload", "", "Reloads the configuration"),
         new HelpEntry("info", "", "Displays server and plugin information")
     );
@@ -77,6 +78,8 @@ public final class OptimizationUtilsCommand {
             .then(Commands.literal("setsimulationdistance")
                 .then(Commands.argument("distance", IntegerArgumentType.integer(2, 32))
                     .executes(ctx -> setSimulationDistance(sender(ctx), IntegerArgumentType.getInteger(ctx, "distance")))))
+            .then(Commands.literal("resetsimulationdistance")
+                .executes(ctx -> resetSimulationDistance(sender(ctx))))
             .then(Commands.literal("setspawnlimit")
                 .then(Commands.argument("category", new SpawnCategoryArgument())
                     .then(Commands.argument("limit", IntegerArgumentType.integer())
@@ -97,6 +100,7 @@ public final class OptimizationUtilsCommand {
                     .then(Commands.argument("player", ArgumentTypes.player())
                         .executes(ctx -> setViewDistance(sender(ctx), IntegerArgumentType.getInteger(ctx, "distance"), targetPlayer(ctx))))))
             .then(Commands.literal("resetviewdistance")
+                .executes(ctx -> resetViewDistance(sender(ctx), null))
                 .then(Commands.argument("player", ArgumentTypes.player())
                     .executes(ctx -> resetViewDistance(sender(ctx), targetPlayer(ctx)))))
             .then(Commands.literal("reload")
@@ -148,14 +152,18 @@ public final class OptimizationUtilsCommand {
     }
 
     private static int setSimulationDistance(CommandSender sender, int newSimulationDistance) {
-        for (World world : Bukkit.getWorlds()) {
-            world.setSimulationDistance(newSimulationDistance);
-            NMSUtils.setNMSSimulationDistance(world, newSimulationDistance);
-        }
+        DynamicDistanceManager.SIMULATION.setNormalDistance(newSimulationDistance);
 
-        sender.sendMessage(Component.text("Successfully set simulation distance to " + newSimulationDistance + " for all worlds.").color(NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("Successfully set simulation distance to " + newSimulationDistance + " for all worlds. It is kept across restarts.").color(NamedTextColor.GREEN));
         sendDynamicDistanceNote(sender, DynamicDistanceManager.SIMULATION, newSimulationDistance);
         sender.sendMessage(Component.text("Make sure that \"/paper mobcaps\" will go to the max mobcap, or else use \"/ou setspawnlimit\" to lower mobcap.").color(NamedTextColor.YELLOW));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int resetSimulationDistance(CommandSender sender) {
+        DynamicDistanceManager.SIMULATION.setNormalDistance(-1);
+
+        sender.sendMessage(Component.text("Successfully gave all worlds the simulation distance from server.properties back.").color(NamedTextColor.GREEN));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -163,6 +171,8 @@ public final class OptimizationUtilsCommand {
         for (World world : Bukkit.getWorlds()) {
             world.setSpawnLimit(spawnCategory, limit);
         }
+        // Scale it right away while the mobcap is lowered, instead of spawning with the full limit until the next check
+        DynamicMobcapManager.applyActiveStep();
 
         sender.sendMessage(Component.text("Successfully set spawn limit for " + spawnCategory.name() + " to " + limit + " for all worlds.").color(NamedTextColor.GREEN));
         if (DynamicMobcapManager.currentPercent() < 100) {
@@ -205,16 +215,20 @@ public final class OptimizationUtilsCommand {
             OptimizationUtils.instance().saveDataConfiguration();
             sender.sendMessage(Component.text("Successfully set view distance to " + newViewDistance + " for " + target.getName()).color(NamedTextColor.GREEN));
         } else {
-            for (World world : Bukkit.getWorlds()) {
-                world.setViewDistance(newViewDistance);
-            }
-            sender.sendMessage(Component.text("Successfully set view distance to " + newViewDistance + " for all worlds.").color(NamedTextColor.GREEN));
+            DynamicDistanceManager.VIEW.setNormalDistance(newViewDistance);
+            sender.sendMessage(Component.text("Successfully set view distance to " + newViewDistance + " for all worlds. It is kept across restarts.").color(NamedTextColor.GREEN));
             sendDynamicDistanceNote(sender, DynamicDistanceManager.VIEW, newViewDistance);
         }
         return Command.SINGLE_SUCCESS;
     }
 
     private static int resetViewDistance(CommandSender sender, Player target) {
+        if (target == null) {
+            DynamicDistanceManager.VIEW.setNormalDistance(-1);
+            sender.sendMessage(Component.text("Successfully gave all worlds the view distance from server.properties back.").color(NamedTextColor.GREEN));
+            return Command.SINGLE_SUCCESS;
+        }
+
         target.setViewDistance(-1);
         OptimizationUtils.instance().dataConfiguration().viewDistanceOverrides.remove(target.getUniqueId());
         OptimizationUtils.instance().saveDataConfiguration();
@@ -336,7 +350,7 @@ public final class OptimizationUtilsCommand {
         message = message.append(Component.text("Loaded Chunks:").color(NamedTextColor.AQUA))
                 .append(Component.newline());
         for (World world : Bukkit.getWorlds()) {
-            int chunkCount = world.getLoadedChunks().length;
+            int chunkCount = world.getChunkCount();
             totalChunks += chunkCount;
             message = message.append(Component.text("  " + world.getName() + ": " + chunkCount).color(NamedTextColor.WHITE))
                     .append(Component.newline());

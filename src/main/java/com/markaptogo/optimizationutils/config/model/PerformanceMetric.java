@@ -23,6 +23,17 @@ public enum PerformanceMetric {
     }
 
     /**
+     * Returns true when the threshold is reached at any server performance, since the MSPT is never below 0 and
+     * the TPS never above the tick rate.
+     */
+    public boolean isAlwaysReached(double threshold, double tickRate) {
+        return switch (this) {
+            case MSPT -> threshold <= 0;
+            case TPS -> threshold >= tickRate;
+        };
+    }
+
+    /**
      * Returns true when the value is back on the good side of the threshold by more than the margin.
      */
     public boolean isRecovered(double value, double threshold, double margin, double tickRate) {

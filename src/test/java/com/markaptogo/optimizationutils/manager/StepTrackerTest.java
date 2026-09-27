@@ -159,6 +159,49 @@ class StepTrackerTest {
     }
 
     @Test
+    void aStepReachedAtFullSpeedStaysActiveInsteadOfEndingAndStartingAgain() {
+        // 20 TPS is reached at full speed, which also counts as recovered
+        StepTracker<Double> tracker = tracker(PerformanceMetric.TPS, 0, 2, 0, List.of(20.0));
+
+        assertTrue(update(tracker, 0, TICK_RATE));
+        for (int second = 1; second < 10; second++) {
+            assertFalse(update(tracker, second, TICK_RATE));
+            assertEquals(20.0, tracker.activeStep());
+        }
+    }
+
+    @Test
+    void theActiveStepCanBeCarriedOverToANewTracker() {
+        StepTracker<Double> tracker = tracker(PerformanceMetric.MSPT, 10, 2, 0, MSPT_STEPS);
+
+        tracker.setActiveStep(2);
+        assertEquals(45.0, tracker.activeStep());
+        assertEquals(2, tracker.activeStepIndex());
+
+        // Stays without waiting for the trigger delay, and recovers as usual
+        assertFalse(update(tracker, 0, 46));
+        assertTrue(update(tracker, 1, 30));
+        assertEquals(40.0, tracker.activeStep());
+    }
+
+    @Test
+    void aCarriedOverStepIsClampedToTheSteps() {
+        StepTracker<Double> tracker = tracker(PerformanceMetric.MSPT, 0, 2, 0, MSPT_STEPS);
+
+        tracker.setActiveStep(10);
+        assertEquals(50.0, tracker.activeStep());
+
+        tracker.setActiveStep(-1);
+        assertNull(tracker.activeStep());
+    }
+
+    @Test
+    void findsThresholdsThatAreAlwaysReached() {
+        assertEquals(List.of(45.0, 20.0), tracker(PerformanceMetric.TPS, 0, 2, 0, List.of(45.0, 19.5, 20.0)).alwaysReachedThresholds(TICK_RATE));
+        assertEquals(List.of(), tracker(PerformanceMetric.MSPT, 0, 2, 0, MSPT_STEPS).alwaysReachedThresholds(TICK_RATE));
+    }
+
+    @Test
     void formattedValueIsTheLastMeasuredValue() {
         StepTracker<Double> tracker = tracker(PerformanceMetric.MSPT, 0, 2, 0, MSPT_STEPS);
         update(tracker, 0, 47.123);

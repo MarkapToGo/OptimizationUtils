@@ -12,7 +12,26 @@ public class ThrottleUtils {
     private static final TickTimes TICK_TIMES = new TickTimes(60_000);
 
     public static void recordTickDuration(double mspt) {
-        TICK_TIMES.record(System.currentTimeMillis(), mspt);
+        TICK_TIMES.record(nowMillis(), mspt);
+    }
+
+    /**
+     * Milliseconds for measuring time spans. Unlike the system time, never jumps (e.g. when the clock is synced).
+     */
+    public static long nowMillis() {
+        return System.nanoTime() / 1_000_000;
+    }
+
+    /**
+     * Warns about steps that would always be active, like a TPS threshold of 20, since the TPS never goes above the tick rate.
+     */
+    public static void warnAboutAlwaysReachedSteps(String feature, StepTracker<?> tracker) {
+        for (double threshold : tracker.alwaysReachedThresholds(tickRate())) {
+            OptimizationUtils.instance().getLogger().warning("The step with threshold " + threshold + " in " + feature
+                + " is always active, since the " + tracker.metric() + " never gets better than that. Did you switch the"
+                + " metric without changing the thresholds? " + (tracker.metric() == PerformanceMetric.TPS
+                ? "TPS thresholds have to be below the tick rate (" + tickRate() + ")." : "MSPT thresholds have to be above 0."));
+        }
     }
 
     public static double getValue(PerformanceMetric metric) {
@@ -26,7 +45,7 @@ public class ThrottleUtils {
      * Gets the milliseconds per tick (MSPT) of the server.
      */
     public static double getMspt() {
-        long now = System.currentTimeMillis();
+        long now = nowMillis();
         return switch (OptimizationUtils.instance().pluginConfiguration().msptCalculationMode) {
             case LAST_TICK -> TICK_TIMES.last();
             case AVERAGE_5S -> Bukkit.getAverageTickTime();

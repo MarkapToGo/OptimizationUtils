@@ -1,6 +1,7 @@
 package com.markaptogo.optimizationutils.manager;
 
 import com.markaptogo.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.config.DataConfiguration;
 import com.markaptogo.optimizationutils.config.PluginConfiguration;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -14,6 +15,9 @@ import java.util.UUID;
 /**
  * Lowers the view or simulation distance of every world in steps while the server lags more, and raises it again
  * step by step once it recovers. Never raises a distance above its normal value.
+ * <p>
+ * Also keeps the normal distance set by /ou setviewdistance and /ou setsimulationdistance in data.yml, since the
+ * server itself would go back to the one from server.properties on the next restart.
  */
 public final class DynamicDistanceManager {
 
@@ -45,15 +49,23 @@ public final class DynamicDistanceManager {
      * Starts or stops adjusting the distance depending on the current configuration.
      */
     public void sync() {
+        // Keep the active step, so a reload does not raise the distance until a later check lowers it again,
+        // which would make every player re-render their chunks twice
+        int activeStep = tracker == null ? -1 : tracker.activeStepIndex();
         disable();
 
         PluginConfiguration.DynamicDistance config = config();
         if (!config.enabled) return;
 
         tracker = new StepTracker<>(config.metric, config.triggerDelay, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
+        tracker.setActiveStep(activeStep);
+        ThrottleUtils.warnAboutAlwaysReachedSteps(simulation ? "dynamicSimulationDistance" : "dynamicViewDistance", tracker);
 
         long interval = Math.max(1, config.checkInterval);
         task = Bukkit.getScheduler().runTaskTimer(OptimizationUtils.instance(), this::update, interval, interval);
+
+        // In the same tick as disable(), players only get the distance the worlds end up with
+        applyActiveStep();
     }
 
     /**
@@ -76,6 +88,40 @@ public final class DynamicDistanceManager {
     }
 
     /**
+     * Sets the normal distance of every world (/ou setviewdistance, /ou setsimulationdistance) and keeps it in data.yml,
+     * so it also applies after a restart and to worlds loaded later. -1 gives the worlds the distance from spigot.yml
+     * (server.properties by default) back. Like the commands always did, the simulation distance also adjusts the mob
+     * spawn range and monster despawn range to match.
+     */
+    public void setNormalDistance(int distance) {
+        DataConfiguration data = OptimizationUtils.instance().dataConfiguration();
+        if (simulation) {
+            data.simulationDistance = distance;
+        } else {
+            data.viewDistance = distance;
+        }
+        OptimizationUtils.instance().saveDataConfiguration();
+
+        for (World world : Bukkit.getWorlds()) {
+            applyNormalDistance(world, distance < 0 ? NMSUtils.getNMSConfiguredDistance(world, simulation) : distance);
+        }
+
+        // Lower it again in the same tick while the server lags, so players only get the distance the worlds end up with
+        applyActiveStep();
+    }
+
+    /**
+     * Gives a world the normal distance kept in data.yml, if one was set. For worlds loaded on startup and later.
+     */
+    public void applyStoredDistance(World world) {
+        DataConfiguration data = OptimizationUtils.instance().dataConfiguration();
+        int distance = simulation ? data.simulationDistance : data.viewDistance;
+        if (distance > 0) {
+            applyNormalDistance(world, distance);
+        }
+    }
+
+    /**
      * Returns the maximum distance of the active step, or -1 when the normal distance is used.
      */
     public int currentMaxDistance() {
@@ -91,6 +137,14 @@ public final class DynamicDistanceManager {
         }
 
         // Also runs without a step change, so worlds loaded in the meantime are covered
+        applyActiveStep();
+    }
+
+    /**
+     * Lowers the distance of every world to the active step, or gives them their normal distance back when no step is
+     * active. Also takes a distance changed in the meantime (e.g. by /ou setviewdistance) as the new normal one.
+     */
+    private void applyActiveStep() {
         states.keySet().removeIf(worldId -> Bukkit.getWorld(worldId) == null);
         int maxDistance = currentMaxDistance();
         for (World world : Bukkit.getWorlds()) {
@@ -142,6 +196,13 @@ public final class DynamicDistanceManager {
         setDistance(world, state.base());
         if (state.spawnRanges() != null) {
             NMSUtils.setNMSSpawnRanges(world, state.spawnRanges());
+        }
+    }
+
+    private void applyNormalDistance(World world, int distance) {
+        setDistance(world, clamp(distance));
+        if (simulation) {
+            NMSUtils.setNMSSimulationDistance(world, clamp(distance));
         }
     }
 

@@ -36,15 +36,22 @@ public final class DynamicRandomTickManager {
      * Starts or stops adjusting the random tick speed depending on the current configuration.
      */
     public static void sync() {
+        // Keep the active step, so a reload does not give back the normal random tick speed until a later check lowers it again
+        int activeStep = tracker == null ? -1 : tracker.activeStepIndex();
         disable();
 
         PluginConfiguration.DynamicRandomTickSpeed config = config();
         if (!config.enabled) return;
 
         tracker = new StepTracker<>(config.metric, config.triggerDelay, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
+        tracker.setActiveStep(activeStep);
+        ThrottleUtils.warnAboutAlwaysReachedSteps("dynamicRandomTickSpeed", tracker);
 
         long interval = Math.max(1, config.checkInterval);
         task = Bukkit.getScheduler().runTaskTimer(OptimizationUtils.instance(), DynamicRandomTickManager::update, interval, interval);
+
+        // In the same tick as disable(), so no random tick sees the normal speed in between
+        applyActiveStep();
     }
 
     /**
@@ -94,6 +101,13 @@ public final class DynamicRandomTickManager {
         }
 
         // Also runs without a step change, so worlds loaded in the meantime are covered
+        applyActiveStep();
+    }
+
+    /**
+     * Lowers the random tick speed of every world to the active step, or gives them their normal one back when no step is active.
+     */
+    private static void applyActiveStep() {
         int maxSpeed = currentMaxSpeed();
         for (World world : Bukkit.getWorlds()) {
             if (maxSpeed < 0) {

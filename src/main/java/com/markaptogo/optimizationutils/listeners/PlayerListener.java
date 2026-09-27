@@ -1,7 +1,6 @@
 package com.markaptogo.optimizationutils.listeners;
 
 import com.markaptogo.optimizationutils.OptimizationUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,14 +16,11 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
 
         Map<UUID, Integer> viewDistanceOverrides = OptimizationUtils.instance().dataConfiguration().viewDistanceOverrides;
-        if (viewDistanceOverrides.containsKey(player.getUniqueId())) {
-            // Apply the stored view distance override
-            int viewDistance = viewDistanceOverrides.get(player.getUniqueId());
-            Bukkit.getScheduler().runTaskLater(OptimizationUtils.instance(), () -> {
-                if (!player.isOnline()) return;
-
-                player.setViewDistance(viewDistance);
-            }, 20L); // Delay by 1 second to ensure proper application
+        Integer viewDistance = viewDistanceOverrides.get(player.getUniqueId());
+        if (viewDistance != null) {
+            // Right away, while the client still shows the loading screen. Applied later, the client would
+            // re-render all chunks it just showed.
+            player.setViewDistance(viewDistance);
         }
     }
 }

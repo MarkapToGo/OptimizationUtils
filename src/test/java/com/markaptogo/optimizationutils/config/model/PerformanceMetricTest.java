@@ -36,6 +36,15 @@ class PerformanceMetricTest {
     }
 
     @Test
+    void thresholdsBeyondWhatTheMetricCanReachAreAlwaysReached() {
+        assertTrue(PerformanceMetric.TPS.isAlwaysReached(20, 20));
+        assertTrue(PerformanceMetric.TPS.isAlwaysReached(45, 20));
+        assertFalse(PerformanceMetric.TPS.isAlwaysReached(19.9, 20));
+        assertTrue(PerformanceMetric.MSPT.isAlwaysReached(0, 20));
+        assertFalse(PerformanceMetric.MSPT.isAlwaysReached(45, 20));
+    }
+
+    @Test
     void formatsWithADotRegardlessOfTheLocale() {
         assertEquals("45.50ms MSPT", PerformanceMetric.MSPT.format(45.5));
         assertEquals("19.25 TPS", PerformanceMetric.TPS.format(19.25));

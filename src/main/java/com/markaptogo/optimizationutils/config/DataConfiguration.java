@@ -13,4 +13,8 @@ import java.util.UUID;
 public class DataConfiguration extends OkaeriConfig {
     public Map<String, Integer> originalRandomTickSpeeds = new HashMap<>();
     public Map<UUID, Integer> viewDistanceOverrides = new HashMap<>();
+
+    // Set by /ou setviewdistance and /ou setsimulationdistance for all worlds, -1 for the one from server.properties
+    public int viewDistance = -1;
+    public int simulationDistance = -1;
 }

@@ -26,8 +26,9 @@ Main command: `/optimizationutils` (aliases: `/ou`, `/opt`)
 | `/ou info` | Displays server and plugin information (view/simulation distances, entity counts, loaded chunks, tick rates, feature status) |
 | `/ou analyzechunks [all\|entities\|blockentities] [world]` | Lists the top 10 loaded chunks with the most entities and/or block entities, grouped by type (all worlds by default). Click a chunk to teleport there |
 | `/ou setviewdistance <distance> [player]` | Sets view distance for all worlds, or for a specific player (persisted across restarts) |
-| `/ou resetviewdistance <player>` | Resets a player's view distance to the server default |
-| `/ou setsimulationdistance <distance>` | Sets simulation distance for all worlds while respecting despawn ranges |
+| `/ou resetviewdistance [player]` | Gives all worlds the view distance from server.properties back, or resets a player's view distance to the one of their world |
+| `/ou setsimulationdistance <distance>` | Sets simulation distance for all worlds while respecting despawn ranges (persisted across restarts) |
+| `/ou resetsimulationdistance` | Gives all worlds the simulation distance from server.properties back |
 | `/ou setspawnlimit <spawn category> <limit>` | Sets the mobcap for all worlds |
 | `/ou setticksperspawn <spawn category> <ticks>` | Sets mob spawn frequency (ticks between spawn attempts) for all worlds |
 | `/ou setvillagersensortickrate <ticks>` | Sets villager sensor tick rate for all worlds |
