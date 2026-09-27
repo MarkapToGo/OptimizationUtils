@@ -2,7 +2,6 @@ package com.markaptogo.optimizationutils.manager;
 
 import com.markaptogo.optimizationutils.OptimizationUtils;
 import com.markaptogo.optimizationutils.config.PluginConfiguration;
-import com.markaptogo.optimizationutils.config.model.FilterMode;
 import com.markaptogo.optimizationutils.config.model.TickingDisableMode;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.entity.EntityTickList;
@@ -10,15 +9,15 @@ import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -45,58 +44,74 @@ public final class EntityTickManager {
     }
 
     /**
-     * Cache for {@code bukkit_class:} entries, so the lookup does not run for every mob every second.
+     * Mobs added to a world while {@link TickingDisableMode#ALL_TICKING} runs. The server puts a mob into the tick
+     * list right after {@link #onMobAddedToWorld(Mob)}, so they are taken out on the next tick.
      */
-    private static final Map<String, Class<?>> BUKKIT_CLASSES = new HashMap<>();
-    private static final Set<String> WARNED = new HashSet<>();
+    private static final List<net.minecraft.world.entity.Entity> PENDING = new ArrayList<>();
 
-    private static BukkitTask task = null;
+    /**
+     * The mob types to freeze, worked out from the configuration once instead of for every mob.
+     */
+    private static Set<EntityType> frozenTypes = EnumSet.noneOf(EntityType.class);
+
+    private static BukkitTask sweepTask = null;
+    private static BukkitTask pendingTask = null;
     private static TickingDisableMode runningMode = null;
 
     private EntityTickManager() {
     }
 
     public static boolean isRunning() {
-        return task != null;
+        return runningMode != null;
     }
 
     /**
-     * Starts or stops unticking depending on the current configuration.
+     * Starts or stops unticking depending on the current configuration. Restarts when it is running already,
+     * so mobs that no longer match the configuration get their ticking back.
      */
     public static void sync() {
+        disable();
+
         PluginConfiguration.DisableEntityTicking config = config();
-
-        // Restart when the mode changed, so the previous mode is undone first
-        if (task != null && runningMode != config.mode) {
-            disable();
-        }
-
         if (config.enabled) {
-            enable();
-        } else {
-            disable();
+            enable(config);
         }
     }
 
     /**
-     * Starts unticking the configured mobs. Newly spawned mobs are unticked every second.
+     * Starts unticking the configured mobs.
      */
-    private static void enable() {
-        if (task != null) return;
+    private static void enable(PluginConfiguration.DisableEntityTicking config) {
+        runningMode = config.mode;
+        frozenTypes = MobTypeFilter.matchingTypes(config.entities, config.filterMode,
+            message -> OptimizationUtils.instance().getLogger().warning(message));
 
-        runningMode = config().mode;
-        task = Bukkit.getScheduler().runTaskTimer(OptimizationUtils.instance(), EntityTickManager::freezeAll, 1L, 20L);
+        freezeAll();
+
+        // The server puts mobs back into the tick list when their chunk starts ticking entities again (e.g. a player
+        // comes closer), without any event. Unaware mobs stay unaware, so BUKKIT_AWARE needs no sweep.
+        if (runningMode == TickingDisableMode.ALL_TICKING) {
+            sweepTask = Bukkit.getScheduler().runTaskTimer(OptimizationUtils.instance(), EntityTickManager::sweepTickLists, 20L, 20L);
+        }
     }
 
     /**
      * Stops unticking and gives every affected mob its ticking back.
      */
     public static void disable() {
-        if (task == null) return;
+        if (!isRunning()) return;
 
-        task.cancel();
-        task = null;
+        if (sweepTask != null) {
+            sweepTask.cancel();
+            sweepTask = null;
+        }
+        if (pendingTask != null) {
+            pendingTask.cancel();
+            pendingTask = null;
+        }
+        PENDING.clear();
         runningMode = null;
+        frozenTypes = EnumSet.noneOf(EntityType.class);
 
         for (World world : Bukkit.getWorlds()) {
             EntityTickList tickList = getTickList(world);
@@ -108,12 +123,12 @@ public final class EntityTickManager {
     }
 
     /**
-     * Called when a mob is added to a world. Freezes it right away when the feature is on,
+     * Called when a mob is added to a world. Freezes it when the feature is on,
      * or restores it when it was left frozen by a previous run.
      */
     public static void onMobAddedToWorld(Mob mob) {
         if (isRunning()) {
-            if (matches(mob, config())) freeze(mob);
+            if (frozenTypes.contains(mob.getType())) freeze(mob);
         } else if (isMarkedFrozen(mob)) {
             // Heal mobs left frozen by a crash or a config change
             unfreezeAware(mob);
@@ -121,22 +136,34 @@ public final class EntityTickManager {
     }
 
     /**
-     * Stops ticking every matching mob. Returns how many mobs were affected.
+     * Stops ticking every matching mob that is in a world already.
      */
-    public static int freezeAll() {
-        PluginConfiguration.DisableEntityTicking config = config();
-        int count = 0;
-
+    private static void freezeAll() {
         for (World world : Bukkit.getWorlds()) {
             for (Mob mob : world.getEntitiesByClass(Mob.class)) {
-                if (!matches(mob, config)) continue;
-
-                freeze(mob);
-                count++;
+                if (frozenTypes.contains(mob.getType())) freeze(mob);
             }
         }
+    }
 
-        return count;
+    /**
+     * Takes the matching mobs out of the tick lists. Frozen mobs are not in there, so this only goes through
+     * the entities that are ticked right now.
+     */
+    private static void sweepTickLists() {
+        List<net.minecraft.world.entity.Entity> toFreeze = new ArrayList<>();
+
+        for (World world : Bukkit.getWorlds()) {
+            EntityTickList tickList = getTickList(world);
+            tickList.forEach(entity -> {
+                if (entity instanceof net.minecraft.world.entity.Mob && frozenTypes.contains(entity.getBukkitEntity().getType())) {
+                    toFreeze.add(entity);
+                }
+            });
+
+            toFreeze.forEach(tickList::remove);
+            toFreeze.clear();
+        }
     }
 
     private static void freeze(Mob mob) {
@@ -149,8 +176,28 @@ public final class EntityTickManager {
             // Clear a marker left behind by a previous BUKKIT_AWARE run
             unfreezeAware(mob);
 
-            getTickList(mob.getWorld()).remove(ReflectionUtils.getNMSEntity(mob));
+            freezeNextTick(ReflectionUtils.getNMSEntity(mob));
         }
+    }
+
+    private static void freezeNextTick(net.minecraft.world.entity.Entity entity) {
+        PENDING.add(entity);
+
+        if (pendingTask == null) {
+            pendingTask = Bukkit.getScheduler().runTask(OptimizationUtils.instance(), EntityTickManager::freezePending);
+        }
+    }
+
+    private static void freezePending() {
+        pendingTask = null;
+
+        for (net.minecraft.world.entity.Entity entity : PENDING) {
+            // Removing a mob that is not in the tick list (e.g. its chunk does not tick entities) is a no-op
+            if (!entity.isRemoved()) {
+                getTickList((ServerLevel) entity.level()).remove(entity);
+            }
+        }
+        PENDING.clear();
     }
 
     private static void unfreeze(Mob mob, EntityTickList tickList) {
@@ -176,67 +223,13 @@ public final class EntityTickManager {
         return mob.getPersistentDataContainer().has(frozenKey(), PersistentDataType.BYTE);
     }
 
-    private static boolean matches(Mob mob, PluginConfiguration.DisableEntityTicking config) {
-        boolean listed = false;
-        for (String entry : config.entities) {
-            if (matchesEntry(mob, entry.trim())) {
-                listed = true;
-                break;
-            }
-        }
-
-        return config.filterMode == FilterMode.INCLUDE ? listed : !listed;
-    }
-
-    /**
-     * Matches a single config entry: {@code ALL}, {@code type:COW} or {@code bukkit_class:Mob}.
-     */
-    private static boolean matchesEntry(Mob mob, String entry) {
-        if (entry.equalsIgnoreCase("ALL")) return true;
-
-        int separator = entry.indexOf(':');
-        if (separator < 0) {
-            warnOnce("Ignoring \"" + entry + "\" in disableEntityTicking.entities, it has no type prefix (ALL, type:, bukkit_class:)");
-            return false;
-        }
-
-        String type = entry.substring(0, separator).trim();
-        String value = entry.substring(separator + 1).trim();
-
-        return switch (type.toLowerCase(Locale.ROOT)) {
-            case "type" -> value.equalsIgnoreCase(mob.getType().name());
-            case "bukkit_class" -> bukkitClass(value).isInstance(mob);
-            default -> {
-                warnOnce("Unknown type prefix \"" + type + "\" in disableEntityTicking.entities");
-                yield false;
-            }
-        };
-    }
-
-    /**
-     * Resolves a class from {@code org.bukkit.entity} by its simple name (case sensitive, like {@code Mob} or {@code Monster}).
-     * Returns {@link Void} when it does not exist, so it never matches a mob.
-     */
-    private static Class<?> bukkitClass(String name) {
-        return BUKKIT_CLASSES.computeIfAbsent(name, key -> {
-            try {
-                return Class.forName("org.bukkit.entity." + key);
-            } catch (ClassNotFoundException e) {
-                warnOnce("Unknown bukkit class \"" + key + "\" in disableEntityTicking.entities");
-                return Void.class;
-            }
-        });
-    }
-
-    private static void warnOnce(String message) {
-        if (WARNED.add(message)) {
-            OptimizationUtils.instance().getLogger().warning(message);
-        }
-    }
-
     private static EntityTickList getTickList(World world) {
+        return getTickList(ReflectionUtils.getNMSWorld(world));
+    }
+
+    private static EntityTickList getTickList(ServerLevel level) {
         try {
-            return (EntityTickList) ENTITY_TICK_LIST_FIELD.get(ReflectionUtils.getNMSWorld(world));
+            return (EntityTickList) ENTITY_TICK_LIST_FIELD.get(level);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }

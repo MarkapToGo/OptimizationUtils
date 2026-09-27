@@ -44,7 +44,7 @@ public class PluginConfiguration extends OkaeriConfig {
 
         @Comment("")
         @Comment("How often the server performance is checked and the mobcap adjusted, in ticks (20 ticks = 1 second).")
-        public int checkInterval = 20;
+        public int checkInterval = 600;
 
         @Comment("")
         @Comment("How long (in seconds) the threshold of a step has to be reached before the mobcap is lowered to it. Keeps single")
@@ -133,7 +133,7 @@ public class PluginConfiguration extends OkaeriConfig {
 
         @Comment("")
         @Comment("How often the server performance is checked and the distance adjusted, in ticks (20 ticks = 1 second).")
-        public int checkInterval = 100;
+        public int checkInterval = 1200;
 
         @Comment("")
         @Comment("How long (in seconds) the threshold of a step has to be reached before the distance is lowered to it. Keeps single")
@@ -226,7 +226,7 @@ public class PluginConfiguration extends OkaeriConfig {
 
         @Comment("")
         @Comment("How often the server performance is checked and the random tick speed adjusted, in ticks (20 ticks = 1 second).")
-        public int checkInterval = 20;
+        public int checkInterval = 600;
 
         @Comment("")
         @Comment("How long (in seconds) the threshold of a step has to be reached before the random tick speed is lowered to it.")

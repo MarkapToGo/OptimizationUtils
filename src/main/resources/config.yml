@@ -23,7 +23,7 @@ dynamicMobcap:
   metric: MSPT
   
   # How often the server performance is checked and the mobcap adjusted, in ticks (20 ticks = 1 second).
-  checkInterval: 20
+  checkInterval: 600
   
   # How long (in seconds) the threshold of a step has to be reached before the mobcap is lowered to it. Keeps single
   # lag spikes (e.g. a garbage collection pause) from lowering the mobcap. Should be longer than the time the MSPT is
@@ -79,7 +79,7 @@ dynamicViewDistance:
   metric: MSPT
   
   # How often the server performance is checked and the distance adjusted, in ticks (20 ticks = 1 second).
-  checkInterval: 100
+  checkInterval: 1200
   
   # How long (in seconds) the threshold of a step has to be reached before the distance is lowered to it. Keeps single
   # lag spikes (e.g. a garbage collection pause) from lowering the distance. Should be longer than the time the MSPT is
@@ -116,7 +116,7 @@ dynamicSimulationDistance:
   metric: MSPT
   
   # How often the server performance is checked and the distance adjusted, in ticks (20 ticks = 1 second).
-  checkInterval: 100
+  checkInterval: 1200
   
   # How long (in seconds) the threshold of a step has to be reached before the distance is lowered to it. Keeps single
   # lag spikes (e.g. a garbage collection pause) from lowering the distance. Should be longer than the time the MSPT is
@@ -179,7 +179,7 @@ dynamicRandomTickSpeed:
   metric: MSPT
   
   # How often the server performance is checked and the random tick speed adjusted, in ticks (20 ticks = 1 second).
-  checkInterval: 20
+  checkInterval: 600
   
   # How long (in seconds) the threshold of a step has to be reached before the random tick speed is lowered to it.
   # Keeps single lag spikes (e.g. a garbage collection pause) from lowering the random tick speed. Should be longer than

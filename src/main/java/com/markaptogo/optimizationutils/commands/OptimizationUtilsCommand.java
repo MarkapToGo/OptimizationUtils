@@ -202,7 +202,7 @@ public final class OptimizationUtilsCommand {
         if (target != null) {
             target.setViewDistance(newViewDistance);
             OptimizationUtils.instance().dataConfiguration().viewDistanceOverrides.put(target.getUniqueId(), newViewDistance);
-            OptimizationUtils.instance().dataConfiguration().save();
+            OptimizationUtils.instance().saveDataConfiguration();
             sender.sendMessage(Component.text("Successfully set view distance to " + newViewDistance + " for " + target.getName()).color(NamedTextColor.GREEN));
         } else {
             for (World world : Bukkit.getWorlds()) {
@@ -217,7 +217,7 @@ public final class OptimizationUtilsCommand {
     private static int resetViewDistance(CommandSender sender, Player target) {
         target.setViewDistance(-1);
         OptimizationUtils.instance().dataConfiguration().viewDistanceOverrides.remove(target.getUniqueId());
-        OptimizationUtils.instance().dataConfiguration().save();
+        OptimizationUtils.instance().saveDataConfiguration();
         sender.sendMessage(Component.text("Successfully reset view distance for " + target.getName()).color(NamedTextColor.GREEN));
         return Command.SINGLE_SUCCESS;
     }

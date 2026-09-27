@@ -171,7 +171,7 @@ public final class DynamicRandomTickManager {
     private static void save() {
         if (!dirty) return;
 
-        OptimizationUtils.instance().dataConfiguration().save();
+        OptimizationUtils.instance().saveDataConfiguration();
         dirty = false;
     }
 

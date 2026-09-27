@@ -1,6 +1,7 @@
 package com.markaptogo.optimizationutils;
 
 import com.markaptogo.optimizationutils.commands.OptimizationUtilsCommand;
+import com.markaptogo.optimizationutils.config.AsyncFileWriter;
 import com.markaptogo.optimizationutils.config.ConfigurationFactory;
 import com.markaptogo.optimizationutils.config.DataConfiguration;
 import com.markaptogo.optimizationutils.config.PluginConfiguration;
@@ -23,12 +24,14 @@ public final class OptimizationUtils extends JavaPlugin {
 
     private PluginConfiguration pluginConfiguration;
     private DataConfiguration dataConfiguration;
+    private AsyncFileWriter dataWriter;
 
     private static OptimizationUtils instance;
 
     @Override
     public void onEnable() {
         instance = this;
+        this.dataWriter = new AsyncFileWriter("OptimizationUtils Data Writer", getLogger());
 
         setupMetrics();
 
@@ -61,6 +64,10 @@ public final class OptimizationUtils extends JavaPlugin {
         DynamicDistanceManager.VIEW.disable();
         DynamicDistanceManager.SIMULATION.disable();
         DynamicRandomTickManager.disable();
+
+        // Wait for queued writes, then save the final data on the main thread
+        this.dataWriter.close();
+        this.dataConfiguration.save();
     }
 
     private void registerCommands() {
@@ -85,8 +92,17 @@ public final class OptimizationUtils extends JavaPlugin {
         return dataConfiguration;
     }
 
+    /**
+     * Saves data.yml. The data is copied on the main thread (as YAML) and written to disk on a background thread.
+     */
+    public void saveDataConfiguration() {
+        this.dataWriter.write(this.dataConfiguration.getBindFile(), this.dataConfiguration.saveToString());
+    }
+
     public void reloadConfiguration() {
         ConfigurationFactory.loadPluginConfiguration(this.pluginConfiguration);
+        // The file is behind the data until the queued writes are done
+        this.dataWriter.flush();
         this.dataConfiguration.load();
 
         EntityTickManager.sync();
