@@ -2,13 +2,11 @@ package com.markaptogo.optimizationutils.manager;
 
 import com.markaptogo.optimizationutils.OptimizationUtils;
 import com.markaptogo.optimizationutils.config.PluginConfiguration;
-import com.markaptogo.optimizationutils.config.model.PerformanceMetric;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.SpawnCategory;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -29,17 +27,8 @@ public final class DynamicMobcapManager {
     private static final Map<UUID, Map<SpawnCategory, Limit>> LIMITS = new HashMap<>();
 
     private static BukkitTask task = null;
-    private static PerformanceMetric metric = PerformanceMetric.MSPT;
-    /**
-     * Sorted from the least to the most laggy threshold.
-     */
-    private static List<PluginConfiguration.MobcapStep> steps = List.of();
+    private static StepTracker<PluginConfiguration.MobcapStep> tracker = null;
     private static List<SpawnCategory> categories = List.of();
-
-    /**
-     * Index of the active step in {@link #steps}, or -1 when the normal mobcap is used.
-     */
-    private static int activeStep = -1;
 
     private DynamicMobcapManager() {
     }
@@ -53,15 +42,7 @@ public final class DynamicMobcapManager {
         PluginConfiguration.DynamicMobcap config = config();
         if (!config.enabled) return;
 
-        metric = config.metric;
-        Comparator<PluginConfiguration.MobcapStep> leastLaggyFirst = Comparator.comparingDouble(step -> step.threshold);
-        if (metric == PerformanceMetric.TPS) {
-            // Lower TPS is laggier
-            leastLaggyFirst = leastLaggyFirst.reversed();
-        }
-        steps = config.steps.stream()
-            .sorted(leastLaggyFirst)
-            .toList();
+        tracker = new StepTracker<>(config.metric, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
         // MISC has no spawn limit, World#setSpawnLimit throws for it
         categories = config.categories.stream()
             .filter(category -> category != null && category != SpawnCategory.MISC)
@@ -81,7 +62,7 @@ public final class DynamicMobcapManager {
             task = null;
         }
 
-        activeStep = -1;
+        tracker = null;
         restoreAll();
     }
 
@@ -89,34 +70,22 @@ public final class DynamicMobcapManager {
      * Returns the mobcap in percent of the normal one, 100 when not throttled.
      */
     public static int currentPercent() {
-        return activeStep < 0 ? 100 : percent(steps.get(activeStep));
+        PluginConfiguration.MobcapStep step = activeStep();
+        return step == null ? 100 : percent(step);
     }
 
     public static boolean shouldThrottleSpawners() {
-        return activeStep >= 0 && steps.get(activeStep).throttleSpawners;
+        PluginConfiguration.MobcapStep step = activeStep();
+        return step != null && step.throttleSpawners;
+    }
+
+    private static PluginConfiguration.MobcapStep activeStep() {
+        return tracker == null ? null : tracker.activeStep();
     }
 
     private static void update() {
-        double value = ThrottleUtils.getValue(metric);
-
-        // Laggiest step whose threshold is reached
-        int reachedStep = -1;
-        for (int i = 0; i < steps.size(); i++) {
-            if (ThrottleUtils.isReached(metric, value, steps.get(i).threshold)) reachedStep = i;
-        }
-
-        int newStep = activeStep;
-        if (reachedStep > activeStep) {
-            // Lower the mobcap right away
-            newStep = reachedStep;
-        } else if (activeStep >= 0 && ThrottleUtils.isRecovered(metric, value, steps.get(activeStep).threshold, config().recoveryMargin)) {
-            // Raise it again one step at a time
-            newStep = activeStep - 1;
-        }
-
-        if (newStep != activeStep) {
-            activeStep = newStep;
-            OptimizationUtils.instance().getLogger().info("Server is at " + ThrottleUtils.format(metric, value) + ", setting mobcap to " + currentPercent() + "% of normal");
+        if (tracker.update()) {
+            OptimizationUtils.instance().getLogger().info("Server is at " + tracker.formattedValue() + ", setting mobcap to " + currentPercent() + "% of normal");
         }
 
         // Also runs without a step change, so worlds loaded in the meantime are covered
@@ -126,13 +95,14 @@ public final class DynamicMobcapManager {
     private static void apply() {
         LIMITS.keySet().removeIf(worldId -> Bukkit.getWorld(worldId) == null);
 
+        PluginConfiguration.MobcapStep step = activeStep();
         for (World world : Bukkit.getWorlds()) {
-            if (activeStep < 0) {
+            if (step == null) {
                 restore(world);
                 continue;
             }
 
-            int percent = percent(steps.get(activeStep));
+            int percent = percent(step);
             Map<SpawnCategory, Limit> limits = LIMITS.computeIfAbsent(world.getUID(), id -> new EnumMap<>(SpawnCategory.class));
 
             for (SpawnCategory category : categories) {

@@ -10,6 +10,7 @@ A minecraft plugin with some useful optimization utils (see below).
 ## Features
 
 - **Dynamic mobcap** - lowers the mobcap in configurable steps as MSPT rises or TPS drops (e.g. 75% at 35ms, 50% at 40ms, 0% at 50ms) and raises it again step by step once the server recovers. Each step can optionally throttle spawners too.
+- **Dynamic view and simulation distance** - lowers the view and/or simulation distance of all worlds in configurable steps as MSPT rises or TPS drops (e.g. simulation distance 6 at 40ms, 4 at 50ms), and raises it again step by step once the server stayed recovered for a while.
 - **Dynamic random tick speed** - automatically turns random ticks off when MSPT exceeds (or TPS drops below) a configurable threshold.
 - **Disable entity ticking** - stops ticking selected mobs (they stay in the world, but no AI/movement). Two modes: disabled entity ticking entirely, or uses Bukkit's `Mob#setAware`. Mobs can be filtered by entity type or Bukkit class, with include/exclude lists.
 - **Runtime tweaks via commands** - change view distance (globally or per player, persisted), simulation distance, mobcaps, mob spawn frequency and villager tick rates without a restart.

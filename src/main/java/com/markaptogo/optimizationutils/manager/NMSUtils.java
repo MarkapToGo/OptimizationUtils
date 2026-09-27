@@ -43,6 +43,31 @@ public class NMSUtils {
         }
     }
 
+    /**
+     * The values changed by {@link #setNMSSimulationDistance(World, int)} besides the simulation distance itself.
+     */
+    public record SpawnRanges(byte mobSpawnRange, WorldConfiguration.Entities.Spawning.DespawnRangePair monsterDespawnRange) {
+    }
+
+    public static SpawnRanges getNMSSpawnRanges(World world) {
+        ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
+        return new SpawnRanges(
+            serverLevel.spigotConfig.mobSpawnRange,
+            serverLevel.paperConfig().entities.spawning.despawnRanges.get(MobCategory.MONSTER)
+        );
+    }
+
+    public static void setNMSSpawnRanges(World world, SpawnRanges spawnRanges) {
+        ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
+        serverLevel.spigotConfig.mobSpawnRange = spawnRanges.mobSpawnRange();
+        serverLevel.paperConfig().entities.spawning.despawnRanges.replace(MobCategory.MONSTER, spawnRanges.monsterDespawnRange());
+        try {
+            serverLevel.paperConfig().entities.spawning.precomputeDespawnDistances();
+        } catch (SerializationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void setNMSVillagerSensorTickRate(World world, int ticks) {
         ServerLevel serverLevel = ReflectionUtils.getNMSWorld(world);
         serverLevel.paperConfig().tickRates.sensor.put(EntityTypes.VILLAGER, "secondarypoisensor", ticks);

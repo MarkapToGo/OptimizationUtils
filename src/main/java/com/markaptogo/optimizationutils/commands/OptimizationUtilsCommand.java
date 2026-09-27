@@ -3,6 +3,7 @@ package com.markaptogo.optimizationutils.commands;
 import com.markaptogo.optimizationutils.OptimizationUtils;
 import com.markaptogo.optimizationutils.config.PluginConfiguration;
 import com.markaptogo.optimizationutils.config.model.PerformanceMetric;
+import com.markaptogo.optimizationutils.manager.DynamicDistanceManager;
 import com.markaptogo.optimizationutils.manager.DynamicMobcapManager;
 import com.markaptogo.optimizationutils.manager.EntityTickManager;
 import com.markaptogo.optimizationutils.manager.NMSUtils;
@@ -160,6 +161,7 @@ public final class OptimizationUtilsCommand {
         }
 
         sender.sendMessage(Component.text("Successfully set simulation distance to " + newSimulationDistance + " for all worlds.").color(NamedTextColor.GREEN));
+        sendDynamicDistanceNote(sender, DynamicDistanceManager.SIMULATION, newSimulationDistance);
         sender.sendMessage(Component.text("Make sure that \"/paper mobcaps\" will go to the max mobcap, or else use \"/ou setspawnlimit\" to lower mobcap.").color(NamedTextColor.YELLOW));
         return Command.SINGLE_SUCCESS;
     }
@@ -214,6 +216,7 @@ public final class OptimizationUtilsCommand {
                 world.setViewDistance(newViewDistance);
             }
             sender.sendMessage(Component.text("Successfully set view distance to " + newViewDistance + " for all worlds.").color(NamedTextColor.GREEN));
+            sendDynamicDistanceNote(sender, DynamicDistanceManager.VIEW, newViewDistance);
         }
         return Command.SINGLE_SUCCESS;
     }
@@ -390,6 +393,11 @@ public final class OptimizationUtilsCommand {
         message = message.append(Component.text("  Dynamic Mobcap: " + dynamicMobcapStatus).color(NamedTextColor.GRAY))
                 .append(Component.newline());
 
+        message = message.append(Component.text("  Dynamic View Distance: " + dynamicDistanceStatus(DynamicDistanceManager.VIEW, OptimizationUtils.instance().pluginConfiguration().dynamicViewDistance)).color(NamedTextColor.GRAY))
+                .append(Component.newline());
+        message = message.append(Component.text("  Dynamic Simulation Distance: " + dynamicDistanceStatus(DynamicDistanceManager.SIMULATION, OptimizationUtils.instance().pluginConfiguration().dynamicSimulationDistance)).color(NamedTextColor.GRAY))
+                .append(Component.newline());
+
         String dynamicRandomTickStatus = OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.enabled
             ? "Enabled (threshold: " + OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.threshold + " " + OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.metric + ")"
             : "Disabled";
@@ -404,6 +412,23 @@ public final class OptimizationUtilsCommand {
 
         sender.sendMessage(message);
         return Command.SINGLE_SUCCESS;
+    }
+
+    private static String dynamicDistanceStatus(DynamicDistanceManager manager, PluginConfiguration.DynamicDistance config) {
+        if (!config.enabled) return "Disabled";
+
+        int maxDistance = manager.currentMaxDistance();
+        return "Enabled (by " + config.metric + ", currently " + (maxDistance < 0 ? "normal" : "at most " + maxDistance) + ")";
+    }
+
+    /**
+     * Tells the sender when a distance they just set is lowered by a dynamic distance feature.
+     */
+    private static void sendDynamicDistanceNote(CommandSender sender, DynamicDistanceManager manager, int distance) {
+        int maxDistance = manager.currentMaxDistance();
+        if (maxDistance >= 0 && distance > maxDistance) {
+            sender.sendMessage(Component.text("The server is lagging, so this is lowered to " + maxDistance + " until it recovers.").color(NamedTextColor.YELLOW));
+        }
     }
 
     private record HelpEntry(String name, String syntax, String description) {

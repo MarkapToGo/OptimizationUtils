@@ -27,6 +27,9 @@ dynamicMobcap:
   # mobcap is raised to the previous step. Stops the mobcap from flipping back and forth around a threshold.
   recoveryMargin: 2.0
   
+  # How long (in seconds) the server has to stay recovered before the mobcap is raised to the previous step.
+  recoveryDelay: 0
+  
   # The spawn categories whose mobcap is adjusted.
   # Available: MONSTER, ANIMAL, WATER_ANIMAL, WATER_AMBIENT, WATER_UNDERGROUND_CREATURE, AMBIENT, AXOLOTL
   categories:
@@ -55,6 +58,72 @@ dynamicMobcap:
   - threshold: 50.0
     mobcapPercent: 0
     throttleSpawners: false
+
+# This feature allows the plugin to dynamically lower the view distance of all worlds based on server performance.
+# The view distance is lowered in steps while the server lags more, and raised again step by step once it recovers.
+# Players with a view distance set by /ou setviewdistance <distance> <player> keep theirs.
+dynamicViewDistance:
+  enabled: false
+  
+  # What the thresholds below are compared against.
+  #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  # Change the thresholds and recoveryMargin as well when switching.
+  metric: MSPT
+  
+  # How often the server performance is checked and the distance adjusted, in ticks (20 ticks = 1 second).
+  checkInterval: 100
+  
+  # How far (in the unit of the metric) the server has to recover past the threshold of the active step before the
+  # distance is raised to the previous step.
+  recoveryMargin: 2.0
+  
+  # How long (in seconds) the server has to stay recovered before the distance is raised to the previous step.
+  # Raising the distance loads chunks, which can cause lag on its own, so this should not be too low.
+  recoveryDelay: 30
+  
+  # The steps. The laggiest step whose threshold is reached is active, before the first one the normal distance is used.
+  #  - threshold - the MSPT (reached when at or above) or TPS (reached when at or below) from which on this step is active
+  #  - distance - the maximum distance in chunks (2-32) while this step is active, never above the normal distance
+  steps:
+  - threshold: 45.0
+    distance: 8
+  - threshold: 50.0
+    distance: 6
+
+# This feature allows the plugin to dynamically lower the simulation distance of all worlds based on server performance.
+# The simulation distance is lowered in steps while the server lags more, and raised again step by step once it recovers.
+# Like /ou setsimulationdistance, this also adjusts the mob spawn range and monster despawn range to match.
+dynamicSimulationDistance:
+  enabled: false
+  
+  # What the thresholds below are compared against.
+  #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  # Change the thresholds and recoveryMargin as well when switching.
+  metric: MSPT
+  
+  # How often the server performance is checked and the distance adjusted, in ticks (20 ticks = 1 second).
+  checkInterval: 100
+  
+  # How far (in the unit of the metric) the server has to recover past the threshold of the active step before the
+  # distance is raised to the previous step.
+  recoveryMargin: 2.0
+  
+  # How long (in seconds) the server has to stay recovered before the distance is raised to the previous step.
+  # Raising the distance loads chunks, which can cause lag on its own, so this should not be too low.
+  recoveryDelay: 30
+  
+  # The steps. The laggiest step whose threshold is reached is active, before the first one the normal distance is used.
+  #  - threshold - the MSPT (reached when at or above) or TPS (reached when at or below) from which on this step is active
+  #  - distance - the maximum distance in chunks (2-32) while this step is active, never above the normal distance
+  steps:
+  - threshold: 40.0
+    distance: 6
+  - threshold: 45.0
+    distance: 5
+  - threshold: 50.0
+    distance: 4
 
 # Stops ticking the selected mobs. They stay in the world but are not ticked by the server (no AI, no movement).
 disableEntityTicking:

@@ -48,7 +48,8 @@ public class ThrottleUtils {
     public static boolean isRecovered(PerformanceMetric metric, double value, double threshold, double margin) {
         return switch (metric) {
             case MSPT -> value < threshold - margin;
-            case TPS -> value > threshold + margin;
+            // The TPS never goes above the tick rate, so running at full speed always counts as recovered
+            case TPS -> value > threshold + margin || value >= tickRate();
         };
     }
 
@@ -85,10 +86,14 @@ public class ThrottleUtils {
      * (20 unless changed with /tick rate), since the server waits for the next tick when it is done early.
      */
     public static double getTps() {
-        double tickRate = Bukkit.getServerTickManager().getTickRate();
+        double tickRate = tickRate();
         double mspt = getMspt();
         if (mspt <= 0) return tickRate;
 
         return Math.min(tickRate, 1000.0 / mspt);
+    }
+
+    private static double tickRate() {
+        return Bukkit.getServerTickManager().getTickRate();
     }
 }

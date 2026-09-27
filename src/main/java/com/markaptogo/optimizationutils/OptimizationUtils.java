@@ -7,6 +7,7 @@ import com.markaptogo.optimizationutils.config.PluginConfiguration;
 import com.markaptogo.optimizationutils.listeners.EntityListener;
 import com.markaptogo.optimizationutils.listeners.PlayerListener;
 import com.markaptogo.optimizationutils.listeners.ServerTickListener;
+import com.markaptogo.optimizationutils.manager.DynamicDistanceManager;
 import com.markaptogo.optimizationutils.manager.DynamicMobcapManager;
 import com.markaptogo.optimizationutils.manager.EntityTickManager;
 import com.markaptogo.optimizationutils.manager.ThrottleUtils;
@@ -42,6 +43,8 @@ public final class OptimizationUtils extends JavaPlugin {
 
         EntityTickManager.sync();
         DynamicMobcapManager.sync();
+        DynamicDistanceManager.VIEW.sync();
+        DynamicDistanceManager.SIMULATION.sync();
 
         Bukkit.getPluginManager().registerEvents(new EntityListener(), this);
         Bukkit.getPluginManager().registerEvents(new PlayerListener(), this);
@@ -109,8 +112,10 @@ public final class OptimizationUtils extends JavaPlugin {
         // Give unticked mobs back to the tick list
         EntityTickManager.disable();
 
-        // Give worlds their normal mobcap back
+        // Give worlds their normal mobcap, view and simulation distance back
         DynamicMobcapManager.disable();
+        DynamicDistanceManager.VIEW.disable();
+        DynamicDistanceManager.SIMULATION.disable();
     }
 
     /**
@@ -163,5 +168,7 @@ public final class OptimizationUtils extends JavaPlugin {
 
         EntityTickManager.sync();
         DynamicMobcapManager.sync();
+        DynamicDistanceManager.VIEW.sync();
+        DynamicDistanceManager.SIMULATION.sync();
     }
 }
