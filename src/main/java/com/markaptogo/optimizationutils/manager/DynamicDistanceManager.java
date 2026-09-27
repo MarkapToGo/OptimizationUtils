@@ -50,7 +50,7 @@ public final class DynamicDistanceManager {
         PluginConfiguration.DynamicDistance config = config();
         if (!config.enabled) return;
 
-        tracker = new StepTracker<>(config.metric, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
+        tracker = new StepTracker<>(config.metric, config.triggerDelay, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
 
         long interval = Math.max(1, config.checkInterval);
         task = Bukkit.getScheduler().runTaskTimer(OptimizationUtils.instance(), this::update, interval, interval);

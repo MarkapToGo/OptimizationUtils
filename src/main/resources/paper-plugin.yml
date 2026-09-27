@@ -3,7 +3,7 @@ version: '${version}'
 main: com.markaptogo.optimizationutils.OptimizationUtils
 api-version: '26.2'
 authors: [EpicPlayerA10, MARKAPTOGO]
-website: https://fanth.pl
+website: https://stylelabor.de
 description: A minecraft plugin with some useful optimization utils.
 permissions:
   optimizationutils.admin:

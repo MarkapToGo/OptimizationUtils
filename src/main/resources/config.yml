@@ -5,8 +5,10 @@
 debug: false
 
 # The method used to calculate the MSPT for dynamic features. Also applies to TPS, which is calculated from the MSPT.
-#  - AVERAGE_5S - Uses the average MSPT over the last 5 seconds.
-#  - LAST_TICK - Uses the current MSPT of the last tick.
+#  - LAST_TICK - Uses the MSPT of the last tick. Reacts the fastest, but also to single lag spikes.
+#  - AVERAGE_5S - Uses the average MSPT over the last 5 seconds (like /mspt).
+#  - AVERAGE_10S - Uses the average MSPT over the last 10 seconds.
+#  - AVERAGE_1M - Uses the average MSPT over the last minute. Reacts the slowest.
 msptCalculationMode: AVERAGE_5S
 
 # This feature allows the plugin to dynamically adjust the mobcap based on server performance.
@@ -22,6 +24,11 @@ dynamicMobcap:
   
   # How often the server performance is checked and the mobcap adjusted, in ticks (20 ticks = 1 second).
   checkInterval: 20
+  
+  # How long (in seconds) the threshold of a step has to be reached before the mobcap is lowered to it. Keeps single
+  # lag spikes (e.g. a garbage collection pause) from lowering the mobcap. Should be longer than the time the MSPT is
+  # averaged over (see msptCalculationMode), since one spike keeps the average up for that long.
+  triggerDelay: 10
   
   # How far (in the unit of the metric) the server has to recover past the threshold of the active step before the
   # mobcap is raised to the previous step. Stops the mobcap from flipping back and forth around a threshold.
@@ -74,6 +81,11 @@ dynamicViewDistance:
   # How often the server performance is checked and the distance adjusted, in ticks (20 ticks = 1 second).
   checkInterval: 100
   
+  # How long (in seconds) the threshold of a step has to be reached before the distance is lowered to it. Keeps single
+  # lag spikes (e.g. a garbage collection pause) from lowering the distance. Should be longer than the time the MSPT is
+  # averaged over (see msptCalculationMode), since one spike keeps the average up for that long.
+  triggerDelay: 10
+  
   # How far (in the unit of the metric) the server has to recover past the threshold of the active step before the
   # distance is raised to the previous step.
   recoveryMargin: 2.0
@@ -105,6 +117,11 @@ dynamicSimulationDistance:
   
   # How often the server performance is checked and the distance adjusted, in ticks (20 ticks = 1 second).
   checkInterval: 100
+  
+  # How long (in seconds) the threshold of a step has to be reached before the distance is lowered to it. Keeps single
+  # lag spikes (e.g. a garbage collection pause) from lowering the distance. Should be longer than the time the MSPT is
+  # averaged over (see msptCalculationMode), since one spike keeps the average up for that long.
+  triggerDelay: 10
   
   # How far (in the unit of the metric) the server has to recover past the threshold of the active step before the
   # distance is raised to the previous step.
@@ -149,14 +166,39 @@ disableEntityTicking:
   entities:
   - bukkit_class:Animals
 
-# This feature allows the plugin to dynamically turn on or off random tick speed.
+# This feature allows the plugin to dynamically lower the random tick speed of all worlds based on server performance.
+# The random tick speed is lowered in steps while the server lags more, and raised again step by step once it recovers.
+# Random ticks grow crops, saplings and grass, spread fire and melt ice, among others.
 dynamicRandomTickSpeed:
   enabled: false
   
-  # What the threshold below is compared against.
-  #  - MSPT - milliseconds per tick, random ticks are turned off at or above the threshold.
-  #  - TPS - ticks per second, random ticks are turned off at or below the threshold.
+  # What the thresholds below are compared against.
+  #  - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).
+  #  - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).
+  # Change the thresholds and recoveryMargin as well when switching.
   metric: MSPT
   
-  # The MSPT in milliseconds or the TPS (depending on the metric) at which random ticks are turned off.
-  threshold: 45.0
+  # How often the server performance is checked and the random tick speed adjusted, in ticks (20 ticks = 1 second).
+  checkInterval: 20
+  
+  # How long (in seconds) the threshold of a step has to be reached before the random tick speed is lowered to it.
+  # Keeps single lag spikes (e.g. a garbage collection pause) from lowering the random tick speed. Should be longer than
+  # the time the MSPT is averaged over (see msptCalculationMode), since one spike keeps the average up for that long.
+  triggerDelay: 10
+  
+  # How far (in the unit of the metric) the server has to recover past the threshold of the active step before the
+  # random tick speed is raised to the previous step. Stops it from flipping back and forth around a threshold.
+  recoveryMargin: 2.0
+  
+  # How long (in seconds) the server has to stay recovered before the random tick speed is raised to the previous step.
+  recoveryDelay: 10
+  
+  # The steps. The laggiest step whose threshold is reached is active, before the first one the normal random tick speed is used.
+  #  - threshold - the MSPT (reached when at or above) or TPS (reached when at or below) from which on this step is active
+  #  - randomTickSpeed - the maximum random tick speed while this step is active (0 turns random ticks off),
+  #    never above the normal one (the random_tick_speed game rule, 3 by default)
+  steps:
+  - threshold: 45.0
+    randomTickSpeed: 1
+  - threshold: 50.0
+    randomTickSpeed: 0

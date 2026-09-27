@@ -21,8 +21,10 @@ public class PluginConfiguration extends OkaeriConfig {
 
     @Comment("")
     @Comment("The method used to calculate the MSPT for dynamic features. Also applies to TPS, which is calculated from the MSPT.")
-    @Comment(" - AVERAGE_5S - Uses the average MSPT over the last 5 seconds.")
-    @Comment(" - LAST_TICK - Uses the current MSPT of the last tick.")
+    @Comment(" - LAST_TICK - Uses the MSPT of the last tick. Reacts the fastest, but also to single lag spikes.")
+    @Comment(" - AVERAGE_5S - Uses the average MSPT over the last 5 seconds (like /mspt).")
+    @Comment(" - AVERAGE_10S - Uses the average MSPT over the last 10 seconds.")
+    @Comment(" - AVERAGE_1M - Uses the average MSPT over the last minute. Reacts the slowest.")
     public MsptCalculationMode msptCalculationMode = MsptCalculationMode.AVERAGE_5S;
 
     @Comment("")
@@ -43,6 +45,12 @@ public class PluginConfiguration extends OkaeriConfig {
         @Comment("")
         @Comment("How often the server performance is checked and the mobcap adjusted, in ticks (20 ticks = 1 second).")
         public int checkInterval = 20;
+
+        @Comment("")
+        @Comment("How long (in seconds) the threshold of a step has to be reached before the mobcap is lowered to it. Keeps single")
+        @Comment("lag spikes (e.g. a garbage collection pause) from lowering the mobcap. Should be longer than the time the MSPT is")
+        @Comment("averaged over (see msptCalculationMode), since one spike keeps the average up for that long.")
+        public int triggerDelay = 10;
 
         @Comment("")
         @Comment("How far (in the unit of the metric) the server has to recover past the threshold of the active step before the")
@@ -128,6 +136,12 @@ public class PluginConfiguration extends OkaeriConfig {
         public int checkInterval = 100;
 
         @Comment("")
+        @Comment("How long (in seconds) the threshold of a step has to be reached before the distance is lowered to it. Keeps single")
+        @Comment("lag spikes (e.g. a garbage collection pause) from lowering the distance. Should be longer than the time the MSPT is")
+        @Comment("averaged over (see msptCalculationMode), since one spike keeps the average up for that long.")
+        public int triggerDelay = 10;
+
+        @Comment("")
         @Comment("How far (in the unit of the metric) the server has to recover past the threshold of the active step before the")
         @Comment("distance is raised to the previous step.")
         public float recoveryMargin = 2.0f;
@@ -195,20 +209,61 @@ public class PluginConfiguration extends OkaeriConfig {
     }
 
     @Comment("")
-    @Comment("This feature allows the plugin to dynamically turn on or off random tick speed.")
+    @Comment("This feature allows the plugin to dynamically lower the random tick speed of all worlds based on server performance.")
+    @Comment("The random tick speed is lowered in steps while the server lags more, and raised again step by step once it recovers.")
+    @Comment("Random ticks grow crops, saplings and grass, spread fire and melt ice, among others.")
     public DynamicRandomTickSpeed dynamicRandomTickSpeed = new DynamicRandomTickSpeed();
 
     public static class DynamicRandomTickSpeed extends OkaeriConfig {
         public boolean enabled = false;
 
         @Comment("")
-        @Comment("What the threshold below is compared against.")
-        @Comment(" - MSPT - milliseconds per tick, random ticks are turned off at or above the threshold.")
-        @Comment(" - TPS - ticks per second, random ticks are turned off at or below the threshold.")
+        @Comment("What the thresholds below are compared against.")
+        @Comment(" - MSPT - milliseconds per tick, higher is worse. Thresholds are in milliseconds (50 = the server starts to lag).")
+        @Comment(" - TPS - ticks per second, lower is worse. Thresholds are in TPS (20 = no lag).")
+        @Comment("Change the thresholds and recoveryMargin as well when switching.")
         public PerformanceMetric metric = PerformanceMetric.MSPT;
 
         @Comment("")
-        @Comment("The MSPT in milliseconds or the TPS (depending on the metric) at which random ticks are turned off.")
-        public float threshold = 45.0f;
+        @Comment("How often the server performance is checked and the random tick speed adjusted, in ticks (20 ticks = 1 second).")
+        public int checkInterval = 20;
+
+        @Comment("")
+        @Comment("How long (in seconds) the threshold of a step has to be reached before the random tick speed is lowered to it.")
+        @Comment("Keeps single lag spikes (e.g. a garbage collection pause) from lowering the random tick speed. Should be longer than")
+        @Comment("the time the MSPT is averaged over (see msptCalculationMode), since one spike keeps the average up for that long.")
+        public int triggerDelay = 10;
+
+        @Comment("")
+        @Comment("How far (in the unit of the metric) the server has to recover past the threshold of the active step before the")
+        @Comment("random tick speed is raised to the previous step. Stops it from flipping back and forth around a threshold.")
+        public float recoveryMargin = 2.0f;
+
+        @Comment("")
+        @Comment("How long (in seconds) the server has to stay recovered before the random tick speed is raised to the previous step.")
+        public int recoveryDelay = 10;
+
+        @Comment("")
+        @Comment("The steps. The laggiest step whose threshold is reached is active, before the first one the normal random tick speed is used.")
+        @Comment(" - threshold - the MSPT (reached when at or above) or TPS (reached when at or below) from which on this step is active")
+        @Comment(" - randomTickSpeed - the maximum random tick speed while this step is active (0 turns random ticks off),")
+        @Comment("   never above the normal one (the random_tick_speed game rule, 3 by default)")
+        public List<RandomTickStep> steps = new ArrayList<>(List.of(
+            new RandomTickStep(45.0f, 1),
+            new RandomTickStep(50.0f, 0)
+        ));
+    }
+
+    public static class RandomTickStep extends OkaeriConfig {
+        public float threshold;
+        public int randomTickSpeed;
+
+        public RandomTickStep() {
+        }
+
+        public RandomTickStep(float threshold, int randomTickSpeed) {
+            this.threshold = threshold;
+            this.randomTickSpeed = randomTickSpeed;
+        }
     }
 }

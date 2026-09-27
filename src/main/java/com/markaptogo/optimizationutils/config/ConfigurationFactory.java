@@ -17,6 +17,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ConfigurationFactory {
@@ -68,12 +69,29 @@ public class ConfigurationFactory {
         Path file = config.getBindFile();
         if (Files.exists(file)) {
             try (Reader reader = Files.newBufferedReader(file)) {
-                merge(values, yaml.load(reader));
+                merge(values, migrate(yaml.load(reader)));
             }
         }
 
         config.load(values);
         config.save();
+    }
+
+    /**
+     * Updates settings written by older versions to the current format.
+     */
+    @SuppressWarnings("unchecked")
+    static Object migrate(Object values) {
+        if (values instanceof Map<?, ?> map && map.get("dynamicRandomTickSpeed") instanceof Map<?, ?> section) {
+            // Random ticks used to be turned off at a single threshold, which is now a step
+            Map<String, Object> randomTickSpeed = (Map<String, Object>) section;
+            Object threshold = randomTickSpeed.remove("threshold");
+            if (threshold != null && !randomTickSpeed.containsKey("steps")) {
+                randomTickSpeed.put("steps", List.of(Map.of("threshold", threshold, "randomTickSpeed", 0)));
+            }
+        }
+
+        return values;
     }
 
     /**

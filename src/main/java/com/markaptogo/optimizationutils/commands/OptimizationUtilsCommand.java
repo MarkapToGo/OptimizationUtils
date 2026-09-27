@@ -5,6 +5,7 @@ import com.markaptogo.optimizationutils.config.PluginConfiguration;
 import com.markaptogo.optimizationutils.config.model.PerformanceMetric;
 import com.markaptogo.optimizationutils.manager.DynamicDistanceManager;
 import com.markaptogo.optimizationutils.manager.DynamicMobcapManager;
+import com.markaptogo.optimizationutils.manager.DynamicRandomTickManager;
 import com.markaptogo.optimizationutils.manager.EntityTickManager;
 import com.markaptogo.optimizationutils.manager.NMSUtils;
 import com.markaptogo.optimizationutils.manager.ThrottleUtils;
@@ -12,10 +13,10 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -28,7 +29,6 @@ import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSele
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
@@ -36,7 +36,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.SpawnCategory;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,12 +47,8 @@ public final class OptimizationUtilsCommand {
 
     public static final String PERMISSION = "optimizationutils.admin";
 
-    private static final SimpleCommandExceptionType PLAYER_ONLY = new SimpleCommandExceptionType(
-        MessageComponentSerializer.message().serialize(Component.text("This command can only be used by players."))
-    );
-
     private static final List<HelpEntry> HELP = List.of(
-        new HelpEntry("analyzechunks", "", "Analyze loaded chunks for entity counts"),
+        new HelpEntry("analyzechunks", "[all|entities|blockentities] [world]", "Lists the loaded chunks with the most entities and block entities (click one to teleport)"),
         new HelpEntry("setsimulationdistance", "<distance>", "Sets simulation distance for all worlds while respecting despawn ranges"),
         new HelpEntry("setspawnlimit", "<spawn category> <limit>", "Sets mobcap for all worlds"),
         new HelpEntry("setticksperspawn", "<spawn category> <ticks>", "Sets ticks per spawn for all worlds (how often the server tries to spawn mobs)"),
@@ -78,8 +73,7 @@ public final class OptimizationUtilsCommand {
             .executes(ctx -> help(sender(ctx)))
             .then(Commands.literal("help")
                 .executes(ctx -> help(sender(ctx))))
-            .then(Commands.literal("analyzechunks")
-                .executes(ctx -> analyzeChunks(player(ctx))))
+            .then(analyzeChunksNode())
             .then(Commands.literal("setsimulationdistance")
                 .then(Commands.argument("distance", IntegerArgumentType.integer(2, 32))
                     .executes(ctx -> setSimulationDistance(sender(ctx), IntegerArgumentType.getInteger(ctx, "distance")))))
@@ -116,13 +110,6 @@ public final class OptimizationUtilsCommand {
         return ctx.getSource().getSender();
     }
 
-    private static Player player(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        if (ctx.getSource().getSender() instanceof Player player) {
-            return player;
-        }
-        throw PLAYER_ONLY.create();
-    }
-
     private static Player targetPlayer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         return ctx.getArgument("player", PlayerSelectorArgumentResolver.class).resolve(ctx.getSource()).getFirst();
     }
@@ -139,18 +126,24 @@ public final class OptimizationUtilsCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int analyzeChunks(Player player) {
-        player.sendMessage("Analyzing chunks...");
+    // /ou analyzechunks [all|entities|blockentities] [world]
+    private static LiteralArgumentBuilder<CommandSourceStack> analyzeChunksNode() {
+        LiteralArgumentBuilder<CommandSourceStack> node = Commands.literal("analyzechunks")
+            .executes(ctx -> analyzeChunks(sender(ctx), ChunkAnalysis.Ranking.ALL, null));
 
-        Map<Chunk, Integer> chunkEntities = new HashMap<>();
-        for (Chunk chunk : player.getWorld().getLoadedChunks()) {
-            chunkEntities.put(chunk, chunk.getEntities().length);
+        for (ChunkAnalysis.Ranking ranking : ChunkAnalysis.Ranking.values()) {
+            node.then(Commands.literal(ranking.argument)
+                .executes(ctx -> analyzeChunks(sender(ctx), ranking, null))
+                .then(Commands.argument("world", ArgumentTypes.world())
+                    .executes(ctx -> analyzeChunks(sender(ctx), ranking, ctx.getArgument("world", World.class)))));
         }
 
-        chunkEntities.entrySet().stream()
-            .sorted(Map.Entry.<Chunk, Integer>comparingByValue().reversed())
-            .limit(10)
-            .forEach(entry -> player.sendMessage(entry.getValue() + " -> Chunk " + entry.getKey().getX() + " " + entry.getKey().getZ()));
+        return node;
+    }
+
+    private static int analyzeChunks(CommandSender sender, ChunkAnalysis.Ranking ranking, World world) {
+        List<World> worlds = world != null ? List.of(world) : Bukkit.getWorlds();
+        sender.sendMessage(ChunkAnalysis.analyze(worlds, ranking));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -382,8 +375,8 @@ public final class OptimizationUtilsCommand {
         message = message.append(Component.text("  MSPT Calculation Mode: " + OptimizationUtils.instance().pluginConfiguration().msptCalculationMode).color(NamedTextColor.GRAY))
                 .append(Component.newline());
 
-        message = message.append(Component.text("  Current Performance: " + ThrottleUtils.format(PerformanceMetric.MSPT, ThrottleUtils.getMspt())
-                + " / " + ThrottleUtils.format(PerformanceMetric.TPS, ThrottleUtils.getTps())).color(NamedTextColor.GRAY))
+        message = message.append(Component.text("  Current Performance: " + PerformanceMetric.MSPT.format(ThrottleUtils.getMspt())
+                + " / " + PerformanceMetric.TPS.format(ThrottleUtils.getTps())).color(NamedTextColor.GRAY))
                 .append(Component.newline());
 
         String dynamicMobcapStatus = OptimizationUtils.instance().pluginConfiguration().dynamicMobcap.enabled
@@ -398,8 +391,10 @@ public final class OptimizationUtilsCommand {
         message = message.append(Component.text("  Dynamic Simulation Distance: " + dynamicDistanceStatus(DynamicDistanceManager.SIMULATION, OptimizationUtils.instance().pluginConfiguration().dynamicSimulationDistance)).color(NamedTextColor.GRAY))
                 .append(Component.newline());
 
-        String dynamicRandomTickStatus = OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.enabled
-            ? "Enabled (threshold: " + OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.threshold + " " + OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed.metric + ")"
+        PluginConfiguration.DynamicRandomTickSpeed dynamicRandomTickSpeed = OptimizationUtils.instance().pluginConfiguration().dynamicRandomTickSpeed;
+        int maxRandomTickSpeed = DynamicRandomTickManager.currentMaxSpeed();
+        String dynamicRandomTickStatus = dynamicRandomTickSpeed.enabled
+            ? "Enabled (by " + dynamicRandomTickSpeed.metric + ", currently " + (maxRandomTickSpeed < 0 ? "normal" : "at most " + maxRandomTickSpeed) + ")"
             : "Disabled";
         message = message.append(Component.text("  Dynamic Random Tick Speed: " + dynamicRandomTickStatus).color(NamedTextColor.GRAY))
                 .append(Component.newline());

@@ -42,7 +42,7 @@ public final class DynamicMobcapManager {
         PluginConfiguration.DynamicMobcap config = config();
         if (!config.enabled) return;
 
-        tracker = new StepTracker<>(config.metric, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
+        tracker = new StepTracker<>(config.metric, config.triggerDelay, config.recoveryMargin, config.recoveryDelay, config.steps, step -> step.threshold);
         // MISC has no spawn limit, World#setSpawnLimit throws for it
         categories = config.categories.stream()
             .filter(category -> category != null && category != SpawnCategory.MISC)

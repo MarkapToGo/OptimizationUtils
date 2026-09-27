@@ -30,7 +30,9 @@ dependencies {
     implementation 'eu.okaeri:okaeri-configs-serdes-commons:5.0.8'
     implementation 'eu.okaeri:okaeri-configs-validator-okaeri:5.0.8'
 
-    implementation 'org.bstats:bstats-bukkit:3.2.1'
+    testImplementation platform('org.junit:junit-bom:6.1.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 def targetJavaVersion = 25
@@ -52,7 +54,10 @@ tasks.shadowJar {
     archiveClassifier.set('')
 
     relocate('eu.okaeri', 'com.markaptogo.optimizationutils.libs.eu.okaeri')
-    relocate('org.bstats', 'com.markaptogo.optimizationutils.libs.org.bstats')
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.assemble {
