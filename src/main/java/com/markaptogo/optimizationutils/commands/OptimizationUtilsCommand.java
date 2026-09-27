@@ -1,4 +1,4 @@
-package com.epicplayera10.optimizationutils.commands;
+package com.markaptogo.optimizationutils.commands;
 
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.CommandHelp;
@@ -10,10 +10,10 @@ import co.aikar.commands.annotation.Optional;
 import co.aikar.commands.annotation.Subcommand;
 import co.aikar.commands.annotation.Syntax;
 import co.aikar.commands.bukkit.contexts.OnlinePlayer;
-import com.epicplayera10.optimizationutils.OptimizationUtils;
-import com.epicplayera10.optimizationutils.config.PluginConfiguration;
-import com.epicplayera10.optimizationutils.manager.EntityTickManager;
-import com.epicplayera10.optimizationutils.manager.NMSUtils;
+import com.markaptogo.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.config.PluginConfiguration;
+import com.markaptogo.optimizationutils.manager.EntityTickManager;
+import com.markaptogo.optimizationutils.manager.NMSUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;

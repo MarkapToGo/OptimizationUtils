@@ -4,7 +4,7 @@ plugins {
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.17"
 }
 
-group = 'com.epicplayera10'
+group = 'com.markaptogo'
 version = '1.0.10'
 
 repositories {
@@ -46,12 +46,12 @@ tasks.assemble {
 }
 
 shadowJar {
-    relocate("eu.okaeri", "com.epicplayera10.optimizationutils.libs.eu.okaeri")
+    relocate("eu.okaeri", "com.markaptogo.optimizationutils.libs.eu.okaeri")
 
-    relocate("co.aikar.commands", "com.epicplayera10.optimizationutils.libs.acf")
-    relocate("co.aikar.locales", "com.epicplayera10.optimizationutils.libs.locales")
+    relocate("co.aikar.commands", "com.markaptogo.optimizationutils.libs.acf")
+    relocate("co.aikar.locales", "com.markaptogo.optimizationutils.libs.locales")
 
-    relocate("org.bstats", "com.epicplayera10.optimizationutils.libs.org.bstats")
+    relocate("org.bstats", "com.markaptogo.optimizationutils.libs.org.bstats")
 }
 
 def targetJavaVersion = 21

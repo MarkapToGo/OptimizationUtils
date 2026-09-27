@@ -1,4 +1,4 @@
-package com.epicplayera10.optimizationutils.config.model;
+package com.markaptogo.optimizationutils.config.model;
 
 public enum MsptCalculationMode {
     /**

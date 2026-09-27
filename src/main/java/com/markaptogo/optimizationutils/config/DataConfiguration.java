@@ -1,4 +1,4 @@
-package com.epicplayera10.optimizationutils.config;
+package com.markaptogo.optimizationutils.config;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Header;

@@ -1,6 +1,6 @@
-package com.epicplayera10.optimizationutils.manager;
+package com.markaptogo.optimizationutils.manager;
 
-import com.epicplayera10.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.OptimizationUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 

@@ -1,6 +1,6 @@
-package com.epicplayera10.optimizationutils.updatechecker;
+package com.markaptogo.optimizationutils.updatechecker;
 
-import com.epicplayera10.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.OptimizationUtils;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;

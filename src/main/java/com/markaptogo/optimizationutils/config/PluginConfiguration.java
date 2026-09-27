@@ -1,8 +1,8 @@
-package com.epicplayera10.optimizationutils.config;
+package com.markaptogo.optimizationutils.config;
 
-import com.epicplayera10.optimizationutils.config.model.FilterMode;
-import com.epicplayera10.optimizationutils.config.model.MsptCalculationMode;
-import com.epicplayera10.optimizationutils.config.model.TickingDisableMode;
+import com.markaptogo.optimizationutils.config.model.FilterMode;
+import com.markaptogo.optimizationutils.config.model.MsptCalculationMode;
+import com.markaptogo.optimizationutils.config.model.TickingDisableMode;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.Header;

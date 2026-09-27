@@ -1,4 +1,4 @@
-package com.epicplayera10.optimizationutils.manager;
+package com.markaptogo.optimizationutils.manager;
 
 import io.papermc.paper.configuration.type.DespawnRange;
 import io.papermc.paper.configuration.type.number.IntOr;

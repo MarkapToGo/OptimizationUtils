@@ -1,12 +1,12 @@
-package com.epicplayera10.optimizationutils.listeners;
+package com.markaptogo.optimizationutils.listeners;
 
 import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent;
 import com.destroystokyo.paper.event.entity.PlayerNaturallySpawnCreaturesEvent;
 import com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent;
 import com.destroystokyo.paper.event.entity.PreSpawnerSpawnEvent;
-import com.epicplayera10.optimizationutils.OptimizationUtils;
-import com.epicplayera10.optimizationutils.manager.EntityTickManager;
-import com.epicplayera10.optimizationutils.manager.ThrottleUtils;
+import com.markaptogo.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.manager.EntityTickManager;
+import com.markaptogo.optimizationutils.manager.ThrottleUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Mob;

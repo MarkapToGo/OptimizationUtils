@@ -1,6 +1,6 @@
-package com.epicplayera10.optimizationutils.listeners;
+package com.markaptogo.optimizationutils.listeners;
 
-import com.epicplayera10.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.OptimizationUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;

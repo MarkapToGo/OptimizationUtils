@@ -1,16 +1,16 @@
-package com.epicplayera10.optimizationutils;
+package com.markaptogo.optimizationutils;
 
 import co.aikar.commands.PaperCommandManager;
-import com.epicplayera10.optimizationutils.commands.OptimizationUtilsCommand;
-import com.epicplayera10.optimizationutils.config.ConfigurationFactory;
-import com.epicplayera10.optimizationutils.config.DataConfiguration;
-import com.epicplayera10.optimizationutils.config.PluginConfiguration;
-import com.epicplayera10.optimizationutils.listeners.EntityListener;
-import com.epicplayera10.optimizationutils.listeners.PlayerListener;
-import com.epicplayera10.optimizationutils.listeners.UpdateNotifyListener;
-import com.epicplayera10.optimizationutils.manager.EntityTickManager;
-import com.epicplayera10.optimizationutils.manager.ThrottleUtils;
-import com.epicplayera10.optimizationutils.updatechecker.UpdateChecker;
+import com.markaptogo.optimizationutils.commands.OptimizationUtilsCommand;
+import com.markaptogo.optimizationutils.config.ConfigurationFactory;
+import com.markaptogo.optimizationutils.config.DataConfiguration;
+import com.markaptogo.optimizationutils.config.PluginConfiguration;
+import com.markaptogo.optimizationutils.listeners.EntityListener;
+import com.markaptogo.optimizationutils.listeners.PlayerListener;
+import com.markaptogo.optimizationutils.listeners.UpdateNotifyListener;
+import com.markaptogo.optimizationutils.manager.EntityTickManager;
+import com.markaptogo.optimizationutils.manager.ThrottleUtils;
+import com.markaptogo.optimizationutils.updatechecker.UpdateChecker;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;

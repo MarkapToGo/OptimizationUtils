@@ -1,6 +1,6 @@
-package com.epicplayera10.optimizationutils.config;
+package com.markaptogo.optimizationutils.config;
 
-import com.epicplayera10.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.OptimizationUtils;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.serdes.commons.SerdesCommons;
 import eu.okaeri.configs.validator.okaeri.OkaeriValidator;

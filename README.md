@@ -51,6 +51,11 @@ You can build the project using IntelliJ IDEA
 gradlew build
 ```
 
+## Authors
+
+- [EpicPlayerA10](https://github.com/EpicPlayerA10) - original author of the based plugin
+- [MarkapToGo](https://github.com/MarkapToGo) - maintainer of the forked plugin :D
+
 ## Stats
 
 ![](https://bstats.org/signatures/bukkit/OptimizationUtils.svg)

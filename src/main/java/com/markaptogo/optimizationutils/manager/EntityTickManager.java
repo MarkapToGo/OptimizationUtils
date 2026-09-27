@@ -1,9 +1,9 @@
-package com.epicplayera10.optimizationutils.manager;
+package com.markaptogo.optimizationutils.manager;
 
-import com.epicplayera10.optimizationutils.OptimizationUtils;
-import com.epicplayera10.optimizationutils.config.PluginConfiguration;
-import com.epicplayera10.optimizationutils.config.model.FilterMode;
-import com.epicplayera10.optimizationutils.config.model.TickingDisableMode;
+import com.markaptogo.optimizationutils.OptimizationUtils;
+import com.markaptogo.optimizationutils.config.PluginConfiguration;
+import com.markaptogo.optimizationutils.config.model.FilterMode;
+import com.markaptogo.optimizationutils.config.model.TickingDisableMode;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.entity.EntityTickList;
 import org.bukkit.Bukkit;
