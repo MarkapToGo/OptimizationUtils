@@ -10,7 +10,9 @@ import eu.okaeri.configs.annotation.Header;
 import org.bukkit.entity.SpawnCategory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Header("A config file for the plugin.")
 @Header("")
@@ -267,6 +269,112 @@ public class PluginConfiguration extends OkaeriConfig {
         public RandomTickStep(float threshold, int randomTickSpeed) {
             this.threshold = threshold;
             this.randomTickSpeed = randomTickSpeed;
+        }
+    }
+
+    @Comment("")
+    @Comment("Settings for /ou analyzechunks, which ranks the loaded chunks by how much they are estimated to cost the server.")
+    public ChunkAnalysis chunkAnalysis = new ChunkAnalysis();
+
+    public static class ChunkAnalysis extends OkaeriConfig {
+        @Comment("How long (in ticks, 20 = 1 second) scheduled block and fluid ticks (redstone, observers, flowing water and lava, ...)")
+        @Comment("are counted for, which is how long an analysis takes. The analysis only looks at the ticks the server schedules anyway")
+        @Comment("while it runs, so nothing changes and nothing is slower while no analysis runs. Longer catches slow clocks better. (1-200)")
+        public int tickSampleDuration = 40;
+
+        @Comment("")
+        @Comment("How many chunks are listed per page.")
+        public int chunksPerPage = 8;
+
+        @Comment("")
+        @Comment("The score of a chunk estimates what it costs the server each tick, where an ordinary mob costs 1. Only what is")
+        @Comment("ticked counts: entities in chunks that do not tick entities, mobs whose ticking is disabled (see disableEntityTicking)")
+        @Comment("and block entities that never tick (chests, beds, ...) cost nothing.")
+        @Comment("")
+        @Comment("The cost of a mob without an entry in entityWeights.")
+        public double defaultMobWeight = 1.0;
+
+        @Comment("")
+        @Comment("The cost of any other entity (projectiles, boats, ...) without an entry in entityWeights. Mobs without AI")
+        @Comment("(disableEntityTicking with BUKKIT_AWARE) cost at most this.")
+        public double defaultEntityWeight = 0.25;
+
+        @Comment("")
+        @Comment("The cost of an entity by type.")
+        public Map<String, Double> entityWeights = weights(
+            "villager", 4.0,
+            "piglin", 2.0,
+            "piglin_brute", 2.0,
+            "hoglin", 2.0,
+            "zoglin", 2.0,
+            "axolotl", 2.0,
+            "allay", 2.0,
+            "frog", 2.0,
+            "goat", 2.0,
+            "camel", 2.0,
+            "sniffer", 2.0,
+            "armadillo", 2.0,
+            "warden", 3.0,
+            "hopper_minecart", 2.0,
+            "item", 0.25,
+            "experience_orb", 0.25,
+            "falling_block", 0.5,
+            "armor_stand", 0.05,
+            "item_frame", 0.02,
+            "glow_item_frame", 0.02,
+            "painting", 0.01,
+            "item_display", 0.02,
+            "block_display", 0.02,
+            "text_display", 0.02,
+            "interaction", 0.02,
+            "marker", 0.0
+        );
+
+        @Comment("")
+        @Comment("The cost of a ticking block entity without an entry in blockEntityWeights.")
+        public double defaultBlockEntityWeight = 0.5;
+
+        @Comment("")
+        @Comment("The cost of a ticking block entity by type.")
+        public Map<String, Double> blockEntityWeights = weights(
+            "hopper", 1.5,
+            "mob_spawner", 1.0,
+            "trial_spawner", 1.0,
+            "piston", 0.5,
+            "beacon", 0.5,
+            "conduit", 0.5,
+            "furnace", 0.25,
+            "blast_furnace", 0.25,
+            "smoker", 0.25,
+            "brewing_stand", 0.25,
+            "sculk_sensor", 0.25,
+            "calibrated_sculk_sensor", 0.25,
+            "vault", 0.25,
+            "creaking_heart", 0.25,
+            "campfire", 0.1,
+            "sculk_catalyst", 0.1,
+            "sculk_shrieker", 0.1,
+            "end_gateway", 0.1,
+            "daylight_detector", 0.1,
+            "bell", 0.05,
+            "sign", 0.02,
+            "hanging_sign", 0.02
+        );
+
+        @Comment("")
+        @Comment("The cost of scheduling one block tick (repeaters, comparators, observers, ...) each tick on average.")
+        public double blockTickWeight = 0.5;
+
+        @Comment("")
+        @Comment("The cost of scheduling one fluid tick (flowing water and lava) each tick on average.")
+        public double fluidTickWeight = 0.25;
+
+        private static Map<String, Double> weights(Object... typesAndWeights) {
+            Map<String, Double> weights = new LinkedHashMap<>();
+            for (int i = 0; i < typesAndWeights.length; i += 2) {
+                weights.put((String) typesAndWeights[i], (Double) typesAndWeights[i + 1]);
+            }
+            return weights;
         }
     }
 }

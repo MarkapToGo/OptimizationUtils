@@ -204,3 +204,87 @@ dynamicRandomTickSpeed:
     randomTickSpeed: 1
   - threshold: 50.0
     randomTickSpeed: 0
+
+# Settings for /ou analyzechunks, which ranks the loaded chunks by how much they are estimated to cost the server.
+chunkAnalysis:
+  # How long (in ticks, 20 = 1 second) scheduled block and fluid ticks (redstone, observers, flowing water and lava, ...)
+  # are counted for, which is how long an analysis takes. The analysis only looks at the ticks the server schedules anyway
+  # while it runs, so nothing changes and nothing is slower while no analysis runs. Longer catches slow clocks better. (1-200)
+  tickSampleDuration: 40
+  
+  # How many chunks are listed per page.
+  chunksPerPage: 8
+  
+  # The score of a chunk estimates what it costs the server each tick, where an ordinary mob costs 1. Only what is
+  # ticked counts: entities in chunks that do not tick entities, mobs whose ticking is disabled (see disableEntityTicking)
+  # and block entities that never tick (chests, beds, ...) cost nothing.
+  
+  # The cost of a mob without an entry in entityWeights.
+  defaultMobWeight: 1.0
+  
+  # The cost of any other entity (projectiles, boats, ...) without an entry in entityWeights. Mobs without AI
+  # (disableEntityTicking with BUKKIT_AWARE) cost at most this.
+  defaultEntityWeight: 0.25
+  
+  # The cost of an entity by type.
+  entityWeights:
+    villager: 4.0
+    piglin: 2.0
+    piglin_brute: 2.0
+    hoglin: 2.0
+    zoglin: 2.0
+    axolotl: 2.0
+    allay: 2.0
+    frog: 2.0
+    goat: 2.0
+    camel: 2.0
+    sniffer: 2.0
+    armadillo: 2.0
+    warden: 3.0
+    hopper_minecart: 2.0
+    item: 0.25
+    experience_orb: 0.25
+    falling_block: 0.5
+    armor_stand: 0.05
+    item_frame: 0.02
+    glow_item_frame: 0.02
+    painting: 0.01
+    item_display: 0.02
+    block_display: 0.02
+    text_display: 0.02
+    interaction: 0.02
+    marker: 0.0
+  
+  # The cost of a ticking block entity without an entry in blockEntityWeights.
+  defaultBlockEntityWeight: 0.5
+  
+  # The cost of a ticking block entity by type.
+  blockEntityWeights:
+    hopper: 1.5
+    mob_spawner: 1.0
+    trial_spawner: 1.0
+    piston: 0.5
+    beacon: 0.5
+    conduit: 0.5
+    furnace: 0.25
+    blast_furnace: 0.25
+    smoker: 0.25
+    brewing_stand: 0.25
+    sculk_sensor: 0.25
+    calibrated_sculk_sensor: 0.25
+    vault: 0.25
+    creaking_heart: 0.25
+    campfire: 0.1
+    sculk_catalyst: 0.1
+    sculk_shrieker: 0.1
+    end_gateway: 0.1
+    daylight_detector: 0.1
+    bell: 0.05
+    sign: 0.02
+    hanging_sign: 0.02
+  
+  # The cost of scheduling one block tick (repeaters, comparators, observers, ...) each tick on average.
+  blockTickWeight: 0.5
+  
+  # The cost of scheduling one fluid tick (flowing water and lava) each tick on average.
+  fluidTickWeight: 0.25

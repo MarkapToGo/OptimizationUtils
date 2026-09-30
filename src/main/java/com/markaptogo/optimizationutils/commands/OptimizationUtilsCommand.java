@@ -48,7 +48,11 @@ public final class OptimizationUtilsCommand {
     public static final String PERMISSION = "optimizationutils.admin";
 
     private static final List<HelpEntry> HELP = List.of(
-        new HelpEntry("analyzechunks", "[all|entities|blockentities] [world]", "Lists the loaded chunks with the most entities and block entities (click one to teleport)"),
+        new HelpEntry("analyzechunks", "[score|entities|blockentities|ticks] [world]", "Ranks the loaded chunks by estimated cost (entities, block entities, redstone and fluid ticks), click one for details"),
+        new HelpEntry("analyzechunks type", "<type> [world]", "Ranks the loaded chunks by one type, like villager, hopper or repeater"),
+        new HelpEntry("analyzechunks player", "<player>", "Ranks the loaded chunks the player is nearest to"),
+        new HelpEntry("analyzechunks here", "", "Shows everything about the chunk you stand in"),
+        new HelpEntry("analyzechunks chunk", "<world> <x> <z>", "Shows everything about a chunk (chunk coordinates)"),
         new HelpEntry("setsimulationdistance", "<distance>", "Sets simulation distance for all worlds while respecting despawn ranges (kept across restarts)"),
         new HelpEntry("resetsimulationdistance", "", "Gives all worlds the simulation distance from server.properties back"),
         new HelpEntry("setspawnlimit", "<spawn category> <limit>", "Sets mobcap for all worlds"),
@@ -74,7 +78,7 @@ public final class OptimizationUtilsCommand {
             .executes(ctx -> help(sender(ctx)))
             .then(Commands.literal("help")
                 .executes(ctx -> help(sender(ctx))))
-            .then(analyzeChunksNode())
+            .then(ChunkAnalysisCommand.node())
             .then(Commands.literal("setsimulationdistance")
                 .then(Commands.argument("distance", IntegerArgumentType.integer(2, 32))
                     .executes(ctx -> setSimulationDistance(sender(ctx), IntegerArgumentType.getInteger(ctx, "distance")))))
@@ -127,27 +131,6 @@ public final class OptimizationUtilsCommand {
                 .append(Component.text(" - " + entry.description(), NamedTextColor.GRAY));
         }
         sender.sendMessage(message);
-        return Command.SINGLE_SUCCESS;
-    }
-
-    // /ou analyzechunks [all|entities|blockentities] [world]
-    private static LiteralArgumentBuilder<CommandSourceStack> analyzeChunksNode() {
-        LiteralArgumentBuilder<CommandSourceStack> node = Commands.literal("analyzechunks")
-            .executes(ctx -> analyzeChunks(sender(ctx), ChunkAnalysis.Ranking.ALL, null));
-
-        for (ChunkAnalysis.Ranking ranking : ChunkAnalysis.Ranking.values()) {
-            node.then(Commands.literal(ranking.argument)
-                .executes(ctx -> analyzeChunks(sender(ctx), ranking, null))
-                .then(Commands.argument("world", ArgumentTypes.world())
-                    .executes(ctx -> analyzeChunks(sender(ctx), ranking, ctx.getArgument("world", World.class)))));
-        }
-
-        return node;
-    }
-
-    private static int analyzeChunks(CommandSender sender, ChunkAnalysis.Ranking ranking, World world) {
-        List<World> worlds = world != null ? List.of(world) : Bukkit.getWorlds();
-        sender.sendMessage(ChunkAnalysis.analyze(worlds, ranking));
         return Command.SINGLE_SUCCESS;
     }
 

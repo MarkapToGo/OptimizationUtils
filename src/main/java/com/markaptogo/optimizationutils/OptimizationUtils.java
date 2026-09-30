@@ -100,6 +100,13 @@ public final class OptimizationUtils extends JavaPlugin {
     }
 
     /**
+     * Writes files on a background thread, like data.yml and exports.
+     */
+    public AsyncFileWriter fileWriter() {
+        return dataWriter;
+    }
+
+    /**
      * Saves data.yml. The data is copied on the main thread (as YAML) and written to disk on a background thread.
      */
     public void saveDataConfiguration() {

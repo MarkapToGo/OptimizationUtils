@@ -15,7 +15,8 @@ A minecraft plugin with some useful optimization utils (see below).
 - **Lag spike protection** - the dynamic features only react once the server lagged for a configurable time, so a single spike (e.g. a garbage collection pause) is ignored. The MSPT can be taken from the last tick or averaged over 5 seconds, 10 seconds or a minute.
 - **Disable entity ticking** - stops ticking selected mobs (they stay in the world, but no AI/movement). Two modes: disabled entity ticking entirely, or uses Bukkit's `Mob#setAware`. Mobs can be filtered by entity type or Bukkit class, with include/exclude lists.
 - **Runtime tweaks via commands** - change view distance (globally or per player, persisted), simulation distance, mobcaps, mob spawn frequency and villager tick rates without a restart.
-- **Diagnostics** - find the chunks with the most entities and block entities (hoppers, furnaces, ...) across all worlds, grouped by type, plus a detailed `/ou info` overview.
+- **Chunk analysis** - ranks the loaded chunks by their estimated cost per tick instead of raw counts: ticking entities and block entities weighted by type (a villager costs more than an armor stand, a chest nothing), plus the scheduled block and fluid ticks of redstone clocks and flowing water/lava. Shows who loads each chunk (nearest player, force load or plugin), can search for a type (villager, hopper, repeater, ...) or a player, and has a clickable compact chat view with sorting, pages, details, teleport and CSV export. Scheduled ticks are only counted while an analysis runs, by reading what the server schedules anyway, so normal gameplay is unaffected.
+- **Diagnostics** - a detailed `/ou info` overview.
 
 ## Commands
 
@@ -24,7 +25,11 @@ Main command: `/optimizationutils` (aliases: `/ou`, `/opt`)
 | Command | Description |
 |---------|-------------|
 | `/ou info` | Displays server and plugin information (view/simulation distances, entity counts, loaded chunks, tick rates, feature status) |
-| `/ou analyzechunks [all\|entities\|blockentities] [world]` | Lists the top 10 loaded chunks with the most entities and/or block entities, grouped by type (all worlds by default). Click a chunk to teleport there |
+| `/ou analyzechunks [score\|entities\|blockentities\|ticks] [world]` | Ranks the loaded chunks by estimated cost (default), entities, block entities or scheduled ticks per second (all worlds by default). Takes `tickSampleDuration` (2s by default) to count scheduled ticks. Click a chunk for details, its coordinates to teleport |
+| `/ou analyzechunks type <type> [world]` | Ranks the chunks by one type, like `villager`, `hopper`, `repeater` or `flowing_water` |
+| `/ou analyzechunks player <player>` | Ranks the chunks the player is the nearest one to (in view distance) |
+| `/ou analyzechunks here` / `chunk <world> <x> <z>` | Everything about one chunk (chunk coordinates): cost per type, load status, who loads it, clickable positions |
+| `/ou analyzechunks page [page]` / `sort <sort>` / `export` / `refresh` | Pages through or re-sorts the last result, saves it to `plugins/OptimizationUtils/exports/` as CSV, or runs it again |
 | `/ou setviewdistance <distance> [player]` | Sets view distance for all worlds, or for a specific player (persisted across restarts) |
 | `/ou resetviewdistance [player]` | Gives all worlds the view distance from server.properties back, or resets a player's view distance to the one of their world |
 | `/ou setsimulationdistance <distance>` | Sets simulation distance for all worlds while respecting despawn ranges (persisted across restarts) |

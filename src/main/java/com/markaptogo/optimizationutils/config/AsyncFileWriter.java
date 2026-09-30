@@ -74,6 +74,9 @@ public final class AsyncFileWriter {
 
     private void writeNow(Path file, String content) {
         try {
+            if (file.getParent() != null) {
+                Files.createDirectories(file.getParent());
+            }
             Files.writeString(file, content, StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to write " + file, e);

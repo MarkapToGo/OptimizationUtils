@@ -227,7 +227,7 @@ public final class EntityTickManager {
         return getTickList(ReflectionUtils.getNMSWorld(world));
     }
 
-    private static EntityTickList getTickList(ServerLevel level) {
+    public static EntityTickList getTickList(ServerLevel level) {
         try {
             return (EntityTickList) ENTITY_TICK_LIST_FIELD.get(level);
         } catch (IllegalAccessException e) {
