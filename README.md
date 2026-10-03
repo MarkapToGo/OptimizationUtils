@@ -29,6 +29,7 @@ Main command: `/optimizationutils` (aliases: `/ou`, `/opt`)
 | `/ou analyzechunks type <type> [world]` | Ranks the chunks by one type, like `villager`, `hopper`, `repeater` or `flowing_water` |
 | `/ou analyzechunks player <player>` | Ranks the chunks the player is the nearest one to (in view distance) |
 | `/ou analyzechunks here` / `chunk <world> <x> <z>` | Everything about one chunk (chunk coordinates): cost per type, load status, who loads it, clickable positions |
+| `/ou analyzechunks show <world> <x> <z>` | One chunk as the last result found it, instantly (what clicking a chunk in the list does); its ↻ button analyzes it again |
 | `/ou analyzechunks page [page]` / `sort <sort>` / `export` / `refresh` | Pages through or re-sorts the last result, saves it to `plugins/OptimizationUtils/exports/` as CSV, or runs it again |
 | `/ou setviewdistance <distance> [player]` | Sets view distance for all worlds, or for a specific player (persisted across restarts) |
 | `/ou resetviewdistance [player]` | Gives all worlds the view distance from server.properties back, or resets a player's view distance to the one of their world |

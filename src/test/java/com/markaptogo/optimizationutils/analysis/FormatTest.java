@@ -17,6 +17,17 @@ class FormatTest {
     }
 
     @Test
+    void costsKeepTheirDecimalsAtAnySize() {
+        assertEquals("20.25", Format.cost(20.25));
+        assertEquals("0.3", Format.cost(0.3));
+        assertEquals("20", Format.cost(20));
+        assertEquals("100", Format.cost(100));
+        assertEquals("1,234.5", Format.cost(1234.5));
+        assertEquals("0.33", Format.cost(0.325000001));
+        assertEquals("0", Format.cost(0));
+    }
+
+    @Test
     void barsShowAnythingAboveZero() {
         assertEquals(10, Format.filled(812, 812, 10));
         assertEquals(6, Format.filled(488, 812, 10));

@@ -145,7 +145,7 @@ public final class ChunkScanner {
     }
 
     /**
-     * Finds the nearest player that has the chunk in view distance, or else why it is loaded.
+     * Finds the nearest player that has the chunk in view distance, and what else keeps it loaded.
      */
     private static void findResponsible(World world, Collection<ChunkStats> chunks) {
         List<Player> players = world.getPlayers();
@@ -170,14 +170,16 @@ public final class ChunkScanner {
             if (nearest != null && nearestDistance <= viewDistance(nearest) + 1) {
                 chunk.responsible = nearest.getName();
                 chunk.responsibleDistance = nearestDistance;
-                continue;
             }
 
+            // Stays loaded when the player leaves, so it is named even with a player near
             Collection<Plugin> tickets = world.getPluginChunkTickets(chunk.x, chunk.z);
             if (world.isChunkForceLoaded(chunk.x, chunk.z)) {
                 chunk.loadReason = "force loaded (/forceload)";
             } else if (!tickets.isEmpty()) {
                 chunk.loadReason = "kept loaded by " + tickets.stream().map(Plugin::getName).sorted().collect(Collectors.joining(", "));
+            } else if (chunk.responsible != null) {
+                continue;
             } else if (nearest != null) {
                 chunk.loadReason = "no player in view distance (nearest: " + nearest.getName() + ", " + nearestDistance + " chunks away)";
             } else {

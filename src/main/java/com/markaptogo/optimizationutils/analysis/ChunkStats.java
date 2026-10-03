@@ -53,7 +53,7 @@ public final class ChunkStats {
     String responsible = null;
     int responsibleDistance = 0;
     /**
-     * Why the chunk is loaded when no player is near, like "force loaded".
+     * What keeps the chunk loaded besides a near player, like "force loaded", or why it is loaded when no player is near.
      */
     String loadReason = null;
 

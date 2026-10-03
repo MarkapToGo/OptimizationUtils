@@ -27,6 +27,14 @@ public final class Format {
     }
 
     /**
+     * Up to two decimals at any size, like "20.25", "0.3" or "1,234", so the costs of a score visibly add up to it.
+     */
+    public static String cost(double value) {
+        String formatted = String.format(Locale.ROOT, "%,.2f", value);
+        return formatted.replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
+    /**
      * Like "120/s".
      */
     public static String perSecond(double value) {

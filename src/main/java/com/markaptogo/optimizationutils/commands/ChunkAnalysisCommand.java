@@ -113,6 +113,13 @@ final class ChunkAnalysisCommand {
                             .suggests((ctx, builder) -> suggestOwnChunk(ctx, builder, chunk -> chunk.getZ()))
                             .executes(ctx -> detail(sender(ctx), ctx.getArgument("world", World.class),
                                 IntegerArgumentType.getInteger(ctx, "x"), IntegerArgumentType.getInteger(ctx, "z")))))))
+            // /ou analyzechunks show <world> <x> <z>
+            .then(Commands.literal("show")
+                .then(Commands.argument("world", ArgumentTypes.world())
+                    .then(Commands.argument("x", IntegerArgumentType.integer())
+                        .then(Commands.argument("z", IntegerArgumentType.integer())
+                            .executes(ctx -> show(sender(ctx), ctx.getArgument("world", World.class),
+                                IntegerArgumentType.getInteger(ctx, "x"), IntegerArgumentType.getInteger(ctx, "z")))))))
             // /ou analyzechunks page [page]
             .then(Commands.literal("page")
                 .executes(ctx -> page(sender(ctx), -1))
@@ -183,12 +190,31 @@ final class ChunkAnalysisCommand {
             ChunkReport report = ChunkScanner.scan(Query.top(Sort.SCORE, world.getKey().asString()), worlds, onlyThisChunk, samples, CostWeights.from(config()));
             ChunkStats chunk = report.find(world.getKey().asString(), x, z);
             if (chunk == null) {
-                send(sender, Component.text("The " + place + " has no entities, block entities or scheduled ticks.", NamedTextColor.GRAY));
+                Component empty = Component.text("The " + place + " has no entities, block entities or scheduled ticks right now.", NamedTextColor.GRAY);
+                ReportView last = result(sender);
+                if (last != null && last.report().find(world.getKey().asString(), x, z) != null) {
+                    empty = empty.append(Component.text(" Your last analysis found some " + Format.duration(System.currentTimeMillis() - last.report().createdAt)
+                        + " ago: mobs move, die and despawn, and scheduled ticks come in bursts (redstone pulses, flowing water).", NamedTextColor.GRAY));
+                }
+                send(sender, empty);
                 return;
             }
 
-            send(sender, ChunkReportMessages.detail(report, chunk, sender instanceof Player, result(sender) != null));
+            send(sender, ChunkReportMessages.detail(report, chunk, sender instanceof Player, result(sender) != null, System.currentTimeMillis()));
         });
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /**
+     * Shows the chunk as the last analysis found it, right away and even when it has changed or unloaded since,
+     * so it matches the list row that was clicked. Analyzes it now when the last analysis does not have it.
+     */
+    private static int show(CommandSender sender, World world, int x, int z) {
+        ReportView view = result(sender);
+        ChunkStats chunk = view != null ? view.report().find(world.getKey().asString(), x, z) : null;
+        if (chunk == null) return detail(sender, world, x, z);
+
+        sender.sendMessage(ChunkReportMessages.detail(view.report(), chunk, sender instanceof Player, true, System.currentTimeMillis()));
         return Command.SINGLE_SUCCESS;
     }
 

@@ -109,4 +109,17 @@ class ChunkReportTest {
         assertTrue(lines[1].startsWith("1,overworld,1,0,24,8,40.00,"), lines[1]);
         assertEquals("\"a, \"\"b\"\"\"", ChunkReportMessages.csvCell("a, \"b\""));
     }
+
+    @Test
+    void forceLoadingIsNamedEvenWithAPlayerNear() {
+        villagers.responsibleDistance = 2;
+        assertEquals("by Steve (2 chunks away)", ChunkReportMessages.loadedBy(villagers));
+
+        villagers.loadReason = "force loaded (/forceload)";
+        assertEquals("force loaded (/forceload), and by Steve (2 chunks away)", ChunkReportMessages.loadedBy(villagers));
+
+        storage.loadReason = "force loaded (/forceload)";
+        assertEquals("force loaded (/forceload)", ChunkReportMessages.loadedBy(storage));
+        assertEquals("unknown", ChunkReportMessages.loadedBy(armorStands));
+    }
 }

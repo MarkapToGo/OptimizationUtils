@@ -109,7 +109,7 @@ public final class ChunkReportMessages {
             .append(Component.text("  " + Format.shorten(mainType(view, chunk), ROW_TYPE_LENGTH), NamedTextColor.WHITE))
             .hoverEvent(HoverEvent.showText(chunkHover(view.report(), chunk).append(Component.newline()).append(Component.newline())
                 .append(Component.text("Click for details", NamedTextColor.YELLOW))))
-            .clickEvent(ClickEvent.runCommand(detailCommand(chunk)))
+            .clickEvent(ClickEvent.runCommand(showCommand(chunk)))
             .build();
 
         Component coordinates = Component.text(chunk.worldLabel + " " + chunk.centerX() + " " + chunk.centerZ(), NamedTextColor.GRAY)
@@ -214,11 +214,16 @@ public final class ChunkReportMessages {
 
     // ---- Detail ----
 
-    public static Component detail(ChunkReport report, ChunkStats chunk, boolean chat, boolean backToList) {
+    public static Component detail(ChunkReport report, ChunkStats chunk, boolean chat, boolean backToList, long now) {
         TextComponent.Builder message = Component.text()
             .append(Component.text(chat ? "━━━ Chunk " + chunk.x + " " + chunk.z + " ━━━ " : "=== Chunk " + chunk.x + " " + chunk.z + " === ", NamedTextColor.GREEN))
-            .append(Component.text(chunk.worldName + " " + chunk.centerX() + " " + chunk.centerZ(), NamedTextColor.GRAY))
-            .append(Component.newline())
+            .append(Component.text(chunk.worldName + " " + chunk.centerX() + " " + chunk.centerZ(), NamedTextColor.GRAY));
+        // Shown from an earlier analysis, the chunk may look different by now
+        long age = now - report.createdAt;
+        if (age >= 5000) {
+            message.append(Component.text(" · as of " + Format.duration(age) + " ago", NamedTextColor.DARK_GRAY));
+        }
+        message.append(Component.newline())
             .append(scoreLine(chunk))
             .append(Component.newline())
             .append(Component.text("Status: ", NamedTextColor.GRAY))
@@ -264,7 +269,7 @@ public final class ChunkReportMessages {
                 .clickEvent(ClickEvent.copyToClipboard(coordinates)))
             .append(Component.space())
             .append(Component.text("[↻]", NamedTextColor.GRAY)
-                .hoverEvent(HoverEvent.showText(Component.text("Analyze this chunk again", NamedTextColor.GRAY)))
+                .hoverEvent(HoverEvent.showText(Component.text("Analyze this chunk again, as it is now", NamedTextColor.GRAY)))
                 .clickEvent(ClickEvent.runCommand(detailCommand(chunk))));
         if (backToList) {
             message.append(Component.space())
@@ -279,7 +284,7 @@ public final class ChunkReportMessages {
     private static Component detailTypeLine(ChunkReport report, ChunkStats chunk, ChunkStats.Kind kind, String type, boolean chat) {
         TypeCounts counts = chunk.of(kind);
         Component line = Component.text("  " + typeAmount(report, chunk, kind, type), NamedTextColor.WHITE)
-            .append(Component.text(counts.cost(type) > 0 ? " · cost " + Format.decimal(counts.cost(type)) : "", NamedTextColor.GRAY));
+            .append(Component.text(counts.cost(type) > 0 ? " · cost " + Format.cost(counts.cost(type)) : "", NamedTextColor.GRAY));
 
         Position position = counts.position(type);
         if (position == null) return line;
@@ -366,9 +371,9 @@ public final class ChunkReportMessages {
     }
 
     private static Component scoreLine(ChunkStats chunk) {
-        return Component.text("Score " + Format.decimal(chunk.score()), severity(chunk.score()))
-            .append(Component.text(" = " + Format.decimal(chunk.entities.cost()) + " entities + " + Format.decimal(chunk.blockEntities.cost())
-                + " block entities + " + Format.decimal(chunk.ticks.cost()) + " ticks", NamedTextColor.GRAY));
+        return Component.text("Score " + Format.cost(chunk.score()), severity(chunk.score()))
+            .append(Component.text(" = " + Format.cost(chunk.entities.cost()) + " entities + " + Format.cost(chunk.blockEntities.cost())
+                + " block entities + " + Format.cost(chunk.ticks.cost()) + " ticks", NamedTextColor.GRAY));
     }
 
     private static Component totals(ChunkReport report) {
@@ -469,11 +474,14 @@ public final class ChunkReportMessages {
         return types.isEmpty() ? "" : typeAmount(report, chunk, kind, types.getFirst());
     }
 
-    private static String loadedBy(ChunkStats chunk) {
-        if (chunk.responsible() != null) {
-            return "by " + chunk.responsible() + (chunk.responsibleDistance() == 0 ? " (in this chunk)" : " (" + chunk.responsibleDistance() + (chunk.responsibleDistance() == 1 ? " chunk away)" : " chunks away)"));
-        }
-        return chunk.loadReason() != null ? chunk.loadReason() : "unknown";
+    /**
+     * Like "force loaded (/forceload), and by Steve (2 chunks away)".
+     */
+    static String loadedBy(ChunkStats chunk) {
+        String player = chunk.responsible() == null ? null
+            : "by " + chunk.responsible() + (chunk.responsibleDistance() == 0 ? " (in this chunk)" : " (" + chunk.responsibleDistance() + (chunk.responsibleDistance() == 1 ? " chunk away)" : " chunks away)"));
+        if (chunk.loadReason() == null) return player != null ? player : "unknown";
+        return player != null ? chunk.loadReason() + ", and " + player : chunk.loadReason();
     }
 
     /**
@@ -486,8 +494,18 @@ public final class ChunkReportMessages {
         return NamedTextColor.GREEN;
     }
 
+    /**
+     * Analyzes the chunk again.
+     */
     public static String detailCommand(ChunkStats chunk) {
         return COMMAND + " chunk " + chunk.worldKey + " " + chunk.x + " " + chunk.z;
+    }
+
+    /**
+     * Shows the chunk as the last analysis found it, which the list rows link to.
+     */
+    public static String showCommand(ChunkStats chunk) {
+        return COMMAND + " show " + chunk.worldKey + " " + chunk.x + " " + chunk.z;
     }
 
     private static String teleportCommand(ChunkStats chunk, Position position) {

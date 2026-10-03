@@ -53,6 +53,7 @@ public final class OptimizationUtilsCommand {
         new HelpEntry("analyzechunks player", "<player>", "Ranks the loaded chunks the player is nearest to"),
         new HelpEntry("analyzechunks here", "", "Shows everything about the chunk you stand in"),
         new HelpEntry("analyzechunks chunk", "<world> <x> <z>", "Shows everything about a chunk (chunk coordinates)"),
+        new HelpEntry("analyzechunks show", "<world> <x> <z>", "Shows a chunk as your last analysis found it, like clicking it in the list does"),
         new HelpEntry("setsimulationdistance", "<distance>", "Sets simulation distance for all worlds while respecting despawn ranges (kept across restarts)"),
         new HelpEntry("resetsimulationdistance", "", "Gives all worlds the simulation distance from server.properties back"),
         new HelpEntry("setspawnlimit", "<spawn category> <limit>", "Sets mobcap for all worlds"),
